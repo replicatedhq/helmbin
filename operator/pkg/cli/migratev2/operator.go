@@ -35,7 +35,7 @@ func disableOperator(ctx context.Context, logf LogFunc, cli client.Client, in *e
 
 // cleanupV1 removes control of the Helm Charts from the k0s controller and uninstalls the Embedded
 // Cluster operator.
-func cleanupV1(ctx context.Context, logf LogFunc, cli client.Client) error {
+func cleanupV1(ctx context.Context, logf LogFunc, cli client.Client, helmCLI helm.Client) error {
 	logf("Force deleting Chart custom resources")
 	// forceDeleteChartCRs is necessary because the k0s controller will otherwise uninstall the
 	// Helm releases and we don't want that.
@@ -51,6 +51,13 @@ func cleanupV1(ctx context.Context, logf LogFunc, cli client.Client) error {
 		return fmt.Errorf("cleanup cluster config: %w", err)
 	}
 	logf("Successfully removed Helm Charts from ClusterConfig")
+
+	logf("Uninstalling operator")
+	err = helmUninstallOperator(ctx, helmCLI)
+	if err != nil {
+		return fmt.Errorf("helm uninstall operator: %w", err)
+	}
+	logf("Successfully uninstalled operator")
 
 	return nil
 }

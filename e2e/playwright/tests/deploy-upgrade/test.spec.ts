@@ -22,7 +22,8 @@ async function fillConfigForm(iframe: FrameLocator) {
   await expect(iframe.locator('h3')).toContainText('The First Config Group', { timeout: 60 * 1000 }); // can take time to download the kots binary
 
   const hostnameInput = iframe.locator('#hostname-group').locator('input[type="text"]');
-  await expect(hostnameInput).toHaveValue(process.env.APP_INITIAL_HOSTNAME ? process.env.APP_INITIAL_HOSTNAME : 'initial-hostname.com');
+  // the hostname can be either 'initial-hostname.com' or 'updated-hostname.com' if we have run the upgrade multiple times
+  await expect(hostnameInput).toHaveValue(process.env.APP_INITIAL_HOSTNAME ? process.env.APP_INITIAL_HOSTNAME : /(initial|updated)-hostname\.com/);
   await hostnameInput.click();
   await hostnameInput.fill('updated-hostname.com');
 

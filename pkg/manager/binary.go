@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 
 	"github.com/replicatedhq/embedded-cluster/pkg/helpers"
+	"github.com/replicatedhq/embedded-cluster/pkg/registry"
 	"github.com/replicatedhq/embedded-cluster/pkg/tgzutils"
 	"github.com/sirupsen/logrus"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -73,6 +75,30 @@ func DownloadBinaryOnline(
 			return fmt.Errorf("move backup file: %w", err)
 		}
 	}
+
+	src := filepath.Join(tmpdir, BinaryName)
+	err = helpers.MoveFile(src, dstPath)
+	if err != nil {
+		return fmt.Errorf("move file: %w", err)
+	}
+
+	return nil
+}
+
+func DownloadBinaryAirgap(ctx context.Context, cli client.Client, dstPath string, srcImage string) error {
+	tmpdir, err := os.MkdirTemp("", "embedded-cluster-artifact-*")
+	if err != nil {
+		return fmt.Errorf("create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpdir)
+
+	err = registry.PullArtifact(ctx, cli, srcImage, tmpdir, registry.PullArtifactOptions{})
+	if err != nil {
+		return fmt.Errorf("pull manager binary from registry: %w", err)
+	}
+
+	// NOTE: We do not try to pull the image using plain http as we do with LAM. This is untested
+	// and it is possible that this will not work for very old installations.
 
 	src := filepath.Join(tmpdir, BinaryName)
 	err = helpers.MoveFile(src, dstPath)

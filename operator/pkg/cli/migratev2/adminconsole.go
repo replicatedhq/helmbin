@@ -7,6 +7,7 @@ import (
 
 	k0sv1beta1 "github.com/k0sproject/k0s/pkg/apis/k0s/v1beta1"
 	ecv1beta1 "github.com/replicatedhq/embedded-cluster/kinds/apis/v1beta1"
+	"github.com/replicatedhq/embedded-cluster/pkg/helpers"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	apitypes "k8s.io/apimachinery/pkg/types"
@@ -54,7 +55,12 @@ func updateAdminConsoleClusterConfig(ctx context.Context, cli client.Client) err
 		}
 	}
 
-	err = cli.Update(ctx, &clusterConfig)
+	unstructured, err := helpers.K0sClusterConfigTo129Compat(&clusterConfig)
+	if err != nil {
+		return fmt.Errorf("convert cluster config to 1.29 compat: %w", err)
+	}
+
+	err = cli.Update(ctx, unstructured)
 	if err != nil {
 		return fmt.Errorf("update k0s cluster config: %w", err)
 	}

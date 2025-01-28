@@ -62,8 +62,39 @@ func TestMoveFile_Directory(t *testing.T) {
 	srcDir, err := os.MkdirTemp("", "sourcedir-*")
 	assert.NoError(t, err)
 	defer os.RemoveAll(srcDir)
-	err = MoveFile(srcDir, "destination")
-	assert.Error(t, err)
+
+	tmpDst, err := os.MkdirTemp("", "destination-*")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDst)
+
+	dstDir := filepath.Join(tmpDst, "destination")
+
+	err = os.Chmod(srcDir, 0777)
+	assert.NoError(t, err)
+
+	srcContent := []byte("test")
+	srcFile, err := os.Create(filepath.Join(srcDir, "test.txt"))
+	assert.NoError(t, err)
+	defer os.Remove(srcFile.Name())
+	defer srcFile.Close()
+
+	_, err = srcFile.Write(srcContent)
+	assert.NoError(t, err)
+
+	err = MoveFile(srcDir, dstDir)
+	assert.NoError(t, err)
+
+	info, err := os.Stat(dstDir)
+	assert.NoError(t, err)
+	assert.Equal(t, info.IsDir(), true, "expected directory")
+	assert.Equal(t, os.FileMode(0777|os.ModeDir).String(), info.Mode().String(), "unexpected file mode")
+
+	_, err = os.Stat(filepath.Join(dstDir, "test.txt"))
+	assert.NoError(t, err)
+
+	content, err := os.ReadFile(filepath.Join(dstDir, "test.txt"))
+	assert.NoError(t, err)
+	assert.Equal(t, srcContent, content, "unexpected content")
 }
 
 func TestMoveFile_Symlink(t *testing.T) {

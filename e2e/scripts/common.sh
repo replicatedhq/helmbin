@@ -89,6 +89,26 @@ wait_for_installation() {
     done
 }
 
+wait_for_installation_v2() {
+    ready=$(kubectl -n embedded-cluster get cm -l replicated.com/installation=embedded-cluster -o yaml | grep -c '"state":"Installed"' || true)
+    counter=0
+    while [ "$ready" -lt "1" ]; do
+        if [ "$counter" -gt 84 ]; then
+            echo "installation did not become ready"
+            kubectl -n embedded-cluster get cm -l replicated.com/installation=embedded-cluster -o yaml 2>&1 || true
+            kubectl get secrets -A
+            kubectl describe clusterconfig -A
+            kubectl get pods -A
+            return 1
+        fi
+        sleep 5
+        counter=$((counter+1))
+        echo "Waiting for installation"
+        ready=$(kubectl -n embedded-cluster get cm -l replicated.com/installation=embedded-cluster -o yaml | grep -c '"state":"Installed"' || true)
+        kubectl get installations 2>&1 || true
+    done
+}
+
 wait_for_nginx_pods() {
     ready=$(kubectl get pods -n "$APP_NAMESPACE" | grep "nginx" | grep -c Running || true)
     counter=0

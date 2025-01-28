@@ -11,8 +11,7 @@ export const deployEC18AppVersion = async (page: Page, expect: Expect) => {
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByText('Preflight checks', { exact: true })).toBeVisible({ timeout: 10 * 1000 });
     await expect(page.getByRole('button', { name: 'Re-run' })).toBeVisible({ timeout: 10 * 1000 });
-    await expect(page.locator('#app')).toContainText('Embedded Cluster Installation CRD exists');
-    await expect(page.locator('#app')).toContainText('Embedded Cluster Config CRD exists');
+    await expect(page.locator('#app')).toContainText('K0s ClusterConfig CRD exists');
     await page.getByRole('button', { name: 'Deploy' }).click();
     await expect(page.locator('#app')).toContainText('Currently deployed version', { timeout: 90000 });
     await expect(page.locator('#app')).toContainText('Ready', { timeout: 45000 });

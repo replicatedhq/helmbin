@@ -35,7 +35,27 @@ func MoveFile(src, dst string) error {
 	}
 
 	if srcinfo.IsDir() {
-		return fmt.Errorf("move directory %s", src)
+		err := os.MkdirAll(dst, srcinfo.Mode())
+		if err != nil {
+			return fmt.Errorf("mkdir: %s", err)
+		}
+
+		err = os.Chmod(dst, srcinfo.Mode())
+		if err != nil {
+			return fmt.Errorf("chmod dir: %s", err)
+		}
+
+		entries, err := os.ReadDir(src)
+		if err != nil {
+			return fmt.Errorf("read source dir: %s", err)
+		}
+		for _, entry := range entries {
+			err = MoveFile(filepath.Join(src, entry.Name()), filepath.Join(dst, entry.Name()))
+			if err != nil {
+				return fmt.Errorf("move file %s to %s: %s", entry.Name(), dst, err)
+			}
+		}
+		return nil
 	}
 
 	srcfp, err := os.Open(src)
@@ -57,6 +77,11 @@ func MoveFile(src, dst string) error {
 
 	if err := dstfp.Sync(); err != nil {
 		return fmt.Errorf("sync file: %s", err)
+	}
+
+	err = os.Chmod(dst, srcinfo.Mode())
+	if err != nil {
+		return fmt.Errorf("chmod file: %s", err)
 	}
 
 	if err := os.Remove(src); err != nil {

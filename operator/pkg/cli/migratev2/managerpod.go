@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _managerInstallPodSpec = corev1.Pod{
@@ -128,16 +129,27 @@ var _managerInstallPodSpec = corev1.Pod{
 
 // InstallAndStartManager installs and starts the manager service on the host. This is run in a pod
 // on all nodes in the cluster.
-func InstallAndStartManager(ctx context.Context, licenseID string, licenseEndpoint string, appVersionLabel string) error {
+func InstallAndStartManager(ctx context.Context, cli client.Client, in *ecv1beta1.Installation, licenseID string, licenseEndpoint string, appVersionLabel string) error {
 	binPath := runtimeconfig.PathToEmbeddedClusterBinary("manager")
 
-	// TODO: airgap
-	err := manager.DownloadBinaryOnline(ctx, binPath, licenseID, licenseEndpoint, appVersionLabel)
-	if err != nil {
-		return fmt.Errorf("download manager binary: %w", err)
+	if in.Spec.AirGap {
+		srcImage := in.Spec.Artifacts.AdditionalArtifacts["manager"]
+		if srcImage == "" {
+			return fmt.Errorf("missing manager binary in airgap artifacts")
+		}
+
+		err := manager.DownloadBinaryAirgap(ctx, cli, binPath, srcImage)
+		if err != nil {
+			return fmt.Errorf("pull manager binary from registry: %w", err)
+		}
+	} else {
+		err := manager.DownloadBinaryOnline(ctx, binPath, licenseID, licenseEndpoint, appVersionLabel)
+		if err != nil {
+			return fmt.Errorf("download manager binary: %w", err)
+		}
 	}
 
-	err = manager.Install(ctx, logrus.Infof)
+	err := manager.Install(ctx, logrus.Infof)
 	if err != nil {
 		return fmt.Errorf("install manager: %w", err)
 	}

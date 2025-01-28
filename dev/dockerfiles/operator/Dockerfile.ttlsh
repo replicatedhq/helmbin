@@ -18,6 +18,7 @@ ENV VERSION=${VERSION}
 ARG K0S_VERSION
 ENV K0S_VERSION=${K0S_VERSION}
 
+ENV GOCACHE=/root/.cache/go-build
 RUN --mount=type=cache,target="/root/.cache/go-build" make -C operator build
 
 FROM debian:bookworm-slim
