@@ -18,6 +18,8 @@ import (
 )
 
 func SupportBundleCmd(ctx context.Context, name string) *cobra.Command {
+	var outputDir string
+
 	cmd := &cobra.Command{
 		Use:   "support-bundle",
 		Short: "Generate a support bundle for the embedded-cluster",
@@ -45,13 +47,22 @@ func SupportBundleCmd(ctx context.Context, name string) *cobra.Command {
 				return fmt.Errorf("unable to find host support bundle: %w", err)
 			}
 
-			pwd, err := os.Getwd()
-			if err != nil {
-				return fmt.Errorf("unable to get current working directory: %w", err)
+			if outputDir == "" {
+				var err error
+				outputDir, err = os.Getwd()
+				if err != nil {
+					return fmt.Errorf("unable to get current working directory: %w", err)
+				}
 			}
+
 			now := time.Now().Format("2006-01-02T15_04_05")
 			fname := fmt.Sprintf("support-bundle-%s.tar.gz", now)
-			destination := filepath.Join(pwd, fname)
+			destination := filepath.Join(outputDir, fname)
+
+			// Ensure the output directory exists
+			if err := os.MkdirAll(outputDir, 0755); err != nil {
+				return fmt.Errorf("unable to create output directory: %w", err)
+			}
 
 			kubeConfig := runtimeconfig.PathToKubeConfig()
 			arguments := []string{}
@@ -94,5 +105,6 @@ func SupportBundleCmd(ctx context.Context, name string) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&outputDir, "dir", "d", "", "Directory where the support bundle will be saved (defaults to working directory)")
 	return cmd
 }
