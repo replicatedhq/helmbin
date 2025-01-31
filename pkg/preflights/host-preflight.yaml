@@ -901,6 +901,24 @@ spec:
           - pass:
               when: 'net.ipv4.ip_forward > 0'
               message: "IP forwarding is enabled."
+    - sysctl:
+        checkName: "Adequate inotify max_user_instances"
+        outcomes:
+          - fail:
+              when: 'fs.inotify.max_user_instances < 1024'
+              message: "Inadequate inotify max_user_instances. To enable it, edit /etc/sysctl.conf, add or edit 'fs.inotify.max_user_instances' to a value of at least 1024, and run 'sudo sysctl -p'."
+          - pass:
+              when: 'fs.inotify.max_user_instances > 1023'
+              message: "Adequate inotify max_user_instances."
+    - sysctl:
+        checkName: "Adequate inotify max_user_watches"
+        outcomes:
+          - fail:
+              when: 'fs.inotify.max_user_watches < 1024'
+              message: "Inadequate inotify max_user_watches. To enable it, edit /etc/sysctl.conf, add or edit 'fs.inotify.max_user_watches' to a value of at least 1024, and run 'sudo sysctl -p'."
+          - pass:
+              when: 'fs.inotify.max_user_watches > 1023'
+              message: "Adequate inotify max_user_watches."
     - networkNamespaceConnectivity:
         collectorName: check-network-namespace-connectivity
         outcomes:
