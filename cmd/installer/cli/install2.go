@@ -116,7 +116,7 @@ func addInstallFlags(cmd *cobra.Command, flags *Install2CmdFlags) error {
 	cmd.Flags().StringVar(&flags.dataDir, "data-dir", ecv1beta1.DefaultDataDir, "Path to the data directory")
 	cmd.Flags().IntVar(&flags.localArtifactMirrorPort, "local-artifact-mirror-port", ecv1beta1.DefaultLocalArtifactMirrorPort, "Port on which the Local Artifact Mirror will be served")
 	cmd.Flags().StringVar(&flags.networkInterface, "network-interface", "", "The network interface to use for the cluster")
-	cmd.Flags().BoolVarP(&flags.assumeYes, "yes", "y", false, "Assume yes to all prompts.")
+	cmd.Flags().BoolVarP(&flags.assumeYes, "yes", "y", false, "Assume yes to all prompts")
 	cmd.Flags().SetNormalizeFunc(normalizeNoPromptToYes)
 
 	cmd.Flags().StringVar(&flags.overrides, "overrides", "", "File with an EmbeddedClusterConfig object to override the default configuration")
@@ -133,14 +133,14 @@ func addInstallFlags(cmd *cobra.Command, flags *Install2CmdFlags) error {
 		return err
 	}
 
-	cmd.Flags().BoolVar(&flags.skipHostPreflights, "skip-host-preflights", false, "Skip host preflight checks. This is not recommended and has been deprecated.")
+	cmd.Flags().BoolVar(&flags.skipHostPreflights, "skip-host-preflights", false, "Skip host preflight checks. This is not recommended and is deprecated.")
 	if err := cmd.Flags().MarkHidden("skip-host-preflights"); err != nil {
 		return err
 	}
-	if err := cmd.Flags().MarkDeprecated("skip-host-preflights", "This flag is deprecated and will be removed in a future version. Use --ignore-host-preflights instead."); err != nil {
+	if err := cmd.Flags().MarkDeprecated("skip-host-preflights", "and it will be removed in a future version. Use --ignore-host-preflights instead."); err != nil {
 		return err
 	}
-	cmd.Flags().BoolVar(&flags.ignoreHostPreflights, "ignore-host-preflights", false, "Allow bypassing host preflight failures")
+	cmd.Flags().BoolVar(&flags.ignoreHostPreflights, "ignore-host-preflights", false, "Prompt the user to continue if host preflights fail")
 
 	return nil
 }
@@ -505,7 +505,7 @@ func verifyNoInstallation(name string, cmdName string) error {
 		return err
 	}
 	if installed {
-		logrus.Errorf("An installation has been detected on this machine.")
+		logrus.Errorf("An installation already exists on this machine.")
 		logrus.Infof("If you want to %s, you need to remove the existing installation first.", cmdName)
 		logrus.Infof("You can do this by running the following command:")
 		logrus.Infof("\n  sudo ./%s reset\n", name)

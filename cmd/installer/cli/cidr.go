@@ -15,20 +15,24 @@ func addCIDRFlags(cmd *cobra.Command) error {
 	if err := cmd.Flags().MarkHidden("pod-cidr"); err != nil {
 		return err
 	}
+	if err := cmd.Flags().MarkDeprecated("pod-cidr", "and it will be removed in a future version. Use --cidr instead."); err != nil {
+		return err
+	}
 	cmd.Flags().String("service-cidr", k0sv1beta1.DefaultNetwork().ServiceCIDR, "IP address range for Services")
 	if err := cmd.Flags().MarkHidden("service-cidr"); err != nil {
 		return err
 	}
+	if err := cmd.Flags().MarkDeprecated("service-cidr", "and it will be removed in a future version. Use --cidr instead."); err != nil {
+		return err
+	}
 	cmd.Flags().String("cidr", ecv1beta1.DefaultNetworkCIDR, "CIDR block of available private IP addresses (/16 or larger)")
+	cmd.MarkFlagsMutuallyExclusive("cidr", "pod-cidr")
+	cmd.MarkFlagsMutuallyExclusive("cidr", "service-cidr")
 
 	return nil
 }
 
 func validateCIDRFlags(cmd *cobra.Command) error {
-	if cmd.Flags().Changed("cidr") && (cmd.Flags().Changed("pod-cidr") || cmd.Flags().Changed("service-cidr")) {
-		return fmt.Errorf("--cidr can't be used with --pod-cidr or --service-cidr")
-	}
-
 	cidr, err := cmd.Flags().GetString("cidr")
 	if err != nil {
 		return fmt.Errorf("unable to get cidr flag: %w", err)

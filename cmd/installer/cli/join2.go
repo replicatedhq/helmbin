@@ -47,7 +47,7 @@ func Join2Cmd(ctx context.Context, name string) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:    "join2 <url> <token>",
-		Short:  fmt.Sprintf("Join %s", name),
+		Short:  fmt.Sprintf("Join this node to the %s cluster", name),
 		Args:   cobra.ExactArgs(2),
 		Hidden: true,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
@@ -72,7 +72,7 @@ func Join2Cmd(ctx context.Context, name string) *cobra.Command {
 				metricsReporter.ReportJoinFailed(ctx, err)
 				return err
 			}
-
+			// TODO: do we check if something is installed here already?
 			metricsReporter.ReportJoinSucceeded(ctx)
 			return nil
 		},
@@ -100,22 +100,22 @@ func preRunJoin2(flags *Join2CmdFlags) error {
 func addJoinFlags(cmd *cobra.Command, flags *Join2CmdFlags) error {
 	cmd.Flags().StringVar(&flags.airgapBundle, "airgap-bundle", "", "Path to the air gap bundle. If set, the installation will complete without internet access.")
 	cmd.Flags().StringVar(&flags.networkInterface, "network-interface", "", "The network interface to use for the cluster")
-	cmd.Flags().BoolVar(&flags.ignoreHostPreflights, "ignore-host-preflights", false, "Run host preflight checks, but prompt the user to continue if they fail instead of exiting.")
+	cmd.Flags().BoolVar(&flags.ignoreHostPreflights, "ignore-host-preflights", false, "Prompt the user to continue if host preflights fail")
 
-	cmd.Flags().BoolVar(&flags.enableHighAvailability, "enable-ha", false, "Enable high availability.")
+	cmd.Flags().BoolVar(&flags.enableHighAvailability, "enable-ha", false, "Enable high availability")
 	if err := cmd.Flags().MarkHidden("enable-ha"); err != nil {
 		return err
 	}
 
-	cmd.Flags().BoolVar(&flags.skipHostPreflights, "skip-host-preflights", false, "Skip host preflight checks. This is not recommended and has been deprecated.")
+	cmd.Flags().BoolVar(&flags.skipHostPreflights, "skip-host-preflights", false, "Skip host preflight checks. This is not recommended and is deprecated.")
 	if err := cmd.Flags().MarkHidden("skip-host-preflights"); err != nil {
 		return err
 	}
-	if err := cmd.Flags().MarkDeprecated("skip-host-preflights", "This flag is deprecated and will be removed in a future version. Use --ignore-host-preflights instead."); err != nil {
+	if err := cmd.Flags().MarkDeprecated("skip-host-preflights", "and it will be removed in a future version. Use --ignore-host-preflights instead."); err != nil {
 		return err
 	}
 
-	cmd.Flags().BoolVar(&flags.assumeYes, "yes", false, "Assume yes to all prompts.")
+	cmd.Flags().BoolVar(&flags.assumeYes, "yes", false, "Assume yes to all prompts")
 	cmd.Flags().SetNormalizeFunc(normalizeNoPromptToYes)
 
 	return nil

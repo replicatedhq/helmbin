@@ -216,7 +216,7 @@ func ResetCmd(ctx context.Context, name string) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&force, "force", false, "Ignore errors encountered when resetting the node (implies ---yes)")
-	cmd.Flags().BoolVar(&assumeYes, "yes", false, "Assume yes to all prompts.")
+	cmd.Flags().BoolVar(&assumeYes, "yes", false, "Assume yes to all prompts")
 	cmd.Flags().SetNormalizeFunc(normalizeNoPromptToYes)
 
 	return cmd

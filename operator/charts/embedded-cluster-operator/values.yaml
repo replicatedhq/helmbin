@@ -1,4 +1,3 @@
-# DEVELOPMENT USE ONLY! THIE FILE IS NOT USED FOR DEPLOYS!
 global:
   labels: {}
 
@@ -10,8 +9,8 @@ embeddedClusterID: 123456789
 isAirgap: false
 
 image:
-  repository: replicated/embedded-cluster-operator-image-staging
-  tag: 0.0.8
+  repository: ttl.sh/alex/embedded-cluster-operator-image
+  tag: 1.22.0-k8s-1.30-29-g1a634-alex
   pullPolicy: IfNotPresent
 
 utilsImage: busybox:latest

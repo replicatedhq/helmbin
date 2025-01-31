@@ -116,7 +116,7 @@ func InstallCmd(ctx context.Context, name string) *cobra.Command {
 				return err
 			}
 			if installed {
-				logrus.Errorf("An installation has been detected on this machine.")
+				logrus.Errorf("An installation already exists on this machine.")
 				logrus.Infof("If you want to reinstall, you need to remove the existing installation first.")
 				logrus.Infof("You can do this by running the following command:")
 				logrus.Infof("\n  sudo ./%s reset\n", name)
@@ -259,13 +259,13 @@ func InstallCmd(ctx context.Context, name string) *cobra.Command {
 	cmd.Flags().StringVarP(&licenseFile, "license", "l", "", "Path to the license file")
 	cmd.Flags().IntVar(&localArtifactMirrorPort, "local-artifact-mirror-port", ecv1beta1.DefaultLocalArtifactMirrorPort, "Port on which the Local Artifact Mirror will be served")
 	cmd.Flags().StringVar(&networkInterface, "network-interface", "", "The network interface to use for the cluster")
-	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "Assume yes to all prompts.")
+	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "Assume yes to all prompts")
 	cmd.Flags().StringVar(&overrides, "overrides", "", "File with an EmbeddedClusterConfig object to override the default configuration")
 	cmd.Flags().MarkHidden("overrides")
 	cmd.Flags().StringSliceVar(&privateCAs, "private-ca", []string{}, "Path to a trusted private CA certificate file")
-	cmd.Flags().BoolVar(&skipHostPreflights, "skip-host-preflights", false, "Skip host preflight checks. This is not recommended and has been deprecated.")
+	cmd.Flags().BoolVar(&skipHostPreflights, "skip-host-preflights", false, "Skip host preflight checks. This is not recommended and isdeprecated.")
 	cmd.Flags().MarkHidden("skip-host-preflights")
-	cmd.Flags().BoolVar(&ignoreHostPreflights, "ignore-host-preflights", false, "Allow bypassing host preflight failures.")
+	cmd.Flags().BoolVar(&ignoreHostPreflights, "ignore-host-preflights", false, "Prompt the user to continue if host preflights fail")
 	cmd.Flags().StringVar(&configValues, "config-values", "", "Path to the config values to use when installing")
 
 	addProxyFlags(cmd)

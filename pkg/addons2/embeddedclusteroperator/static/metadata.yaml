@@ -5,16 +5,16 @@
 # $ make buildtools
 # $ output/bin/buildtools update addon <addon name>
 #
-version: 1.19.0+k8s-1.30
-location: oci://proxy.replicated.com/anonymous/registry.replicated.com/library/embedded-cluster-operator
+version: 1.22.0+k8s-1.30-29-g1a634-alex
+location: oci://proxy.replicated.com/anonymous/ttl.sh/alex/embedded-cluster-operator
 images:
     embedded-cluster-operator:
-        repo: proxy.replicated.com/anonymous/replicated/embedded-cluster-operator-image
+        repo: proxy.replicated.com/anonymous/ttl.sh/alex/embedded-cluster-operator-image
         tag:
             amd64: v1.19.0-k8s-1.30
-            arm64: v1.19.0-k8s-1.30
+            arm64: 1.22.0-k8s-1.30-29-g1a634-alex-arm64@sha256:8d9ecea8ff24c08e480c684e25151ff040833fbef2f49e7f48e9fd2ccdaba8d7
     utils:
-        repo: proxy.replicated.com/anonymous/replicated/ec-utils
+        repo: proxy.replicated.com/anonymous/ttl.sh/replicated/ec-utils
         tag:
-            amd64: latest
-            arm64: latest
+            amd64: latest-amd64@sha256:f499ed26bd5899bc5a1ae14d9d13853d1fc615ae21bde86fe250960772fd2c70
+            arm64: latest-arm64@sha256:cf8f2f69d1c3a1e2faaec223745410c8724c8d6a8d14ca0c641f95b34a895cdf
