@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    app: example
+    component: nginx
+    replicated.com/disaster-recovery: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: example
+      component: nginx
+  template:
+    metadata:
+      labels:
+        app: example
+        component: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: proxy.replicated.com/anonymous/nginx:1.24-alpine
+          resources:
+            limits:
+              memory: '64Mi'
+              cpu: '50m'
+          env:
+            - name: APP_SEQUENCE
+              value: "{{repl Cursor }}"
+            - name: APP_VERSION
+              value: "{{repl VersionLabel }}"
+            - name: APP_CHANNEL
+              value: "{{repl ChannelName }}"
+            - name: CONFIG_HOSTNAME
+              value: '{{repl ConfigOption "hostname" }}'
+            - name: CONFIG_PASSWORD
+              value: '{{repl ConfigOption "pw" }}'

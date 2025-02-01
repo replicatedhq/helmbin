@@ -1,0 +1,33 @@
+apiVersion: velero.io/v1
+kind: Backup
+metadata:
+  name: backup
+  annotations:
+    preserve: me
+spec:
+  ttl: 36h0m0s
+  includedNamespaces:
+  - kotsadm
+  orLabelSelectors:
+  - matchExpressions:
+    - { key: kots.io/kotsadm, operator: NotIn, values: ["true"] }
+  hooks:
+    resources:
+    - name: test-hook
+      includedResources:
+      - 'pods'
+      labelSelector:
+        matchLabels:
+          app: example
+          component: nginx
+      pre:
+      - exec:
+          container: nginx
+          command:
+          - /bin/uname
+          - -a
+      post:
+      - exec:
+          command:
+           - /bin/uname
+           - -a

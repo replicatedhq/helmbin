@@ -1,0 +1,53 @@
+apiVersion: troubleshoot.sh/v1beta2
+kind: HostPreflight
+spec:
+  collectors:
+    - tcpPortStatus:
+        collectorName: Port 24
+        port: 24
+    - tcpPortStatus:
+        collectorName: Port 22
+        port: 22
+  analyzers:
+    - tcpPortStatus:
+        checkName: Port 24
+        collectorName: Port 24
+        outcomes:
+          - fail:
+              when: connection-refused
+              message: Connection to port 24 was refused.
+          - warn:
+              when: address-in-use
+              message: Another process was already listening on port 24.
+          - fail:
+              when: connection-timeout
+              message: Timed out connecting to port 24.
+          - fail:
+              when: error
+              message: Unexpected port status
+          - pass:
+              when: connected
+              message: Port 24 is available
+          - warn:
+              message: Unexpected port status
+    - tcpPortStatus:
+        checkName: Port 22
+        collectorName: Port 22
+        outcomes:
+          - fail:
+              when: connection-refused
+              message: Connection to port 22 was refused.
+          - warn:
+              when: address-in-use
+              message: Another process was already listening on port 22.
+          - fail:
+              when: connection-timeout
+              message: Timed out connecting to port 22.
+          - fail:
+              when: error
+              message: Unexpected port status
+          - pass:
+              when: connected
+              message: Port 22 is available
+          - warn:
+              message: Unexpected port status

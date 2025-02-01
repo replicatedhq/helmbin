@@ -281,12 +281,9 @@ func TestHostPreflightCustomSpec(t *testing.T) {
 	RequireEnvVars(t, []string{"SHORT_SHA"})
 
 	tc := docker.NewCluster(&docker.ClusterInput{
-		T:                    t,
-		Nodes:                1,
-		Distro:               "centos-9",
-		LicensePath:          "license.yaml",
-		ECBinaryPath:         "../output/bin/embedded-cluster",
-		ECReleaseBuilderPath: "../output/bin/embedded-cluster-release-builder",
+		T:      t,
+		Nodes:  1,
+		Distro: "centos-9",
 	})
 	defer tc.Cleanup()
 
@@ -294,6 +291,30 @@ func TestHostPreflightCustomSpec(t *testing.T) {
 	line := []string{"yum", "install", "-y", "fio"}
 	if stdout, stderr, err := tc.RunCommandOnNode(0, line); err != nil {
 		t.Fatalf("fail to install dependencies on node 0: %v: %s: %s", err, stdout, stderr)
+	}
+
+	t.Logf("%s: downloading failing-preflights embedded-cluster on node 0", time.Now().Format(time.RFC3339))
+	line = []string{"vandoor-prepare.sh", fmt.Sprintf("appver-%s-failing-preflights", os.Getenv("SHORT_SHA")), os.Getenv("LICENSE_ID"), "false"}
+	if stdout, stderr, err := tc.RunCommandOnNode(0, line); err != nil {
+		t.Fatalf("fail to download embedded-cluster on node 0: %v: %s: %s", err, stdout, stderr)
+	}
+
+	t.Logf("%s: moving embedded-cluster to /usr/local/bin/embedded-cluster-failing-preflights", time.Now().Format(time.RFC3339))
+	line = []string{"mv", "/usr/local/bin/embedded-cluster", "/usr/local/bin/embedded-cluster-failing-preflights"}
+	if stdout, stderr, err := tc.RunCommandOnNode(0, line); err != nil {
+		t.Fatalf("fail to move embedded-cluster on node 0: %v: %s: %s", err, stdout, stderr)
+	}
+
+	t.Logf("%s: removing the original license file", time.Now().Format(time.RFC3339))
+	line = []string{"rm", "/assets/license.yaml"}
+	if stdout, stderr, err := tc.RunCommandOnNode(0, line); err != nil {
+		t.Fatalf("fail to remove /assets/license.yaml on node 0: %v: %s: %s", err, stdout, stderr)
+	}
+
+	t.Logf("%s: downloading warning-preflights embedded-cluster on node 0", time.Now().Format(time.RFC3339))
+	line = []string{"vandoor-prepare.sh", fmt.Sprintf("appver-%s-warning-preflights", os.Getenv("SHORT_SHA")), os.Getenv("LICENSE_ID"), "false"}
+	if stdout, stderr, err := tc.RunCommandOnNode(0, line); err != nil {
+		t.Fatalf("fail to download embedded-cluster on node 0: %v: %s: %s", err, stdout, stderr)
 	}
 
 	t.Logf("%s: running embedded-cluster preflights on node 0", time.Now().Format(time.RFC3339))

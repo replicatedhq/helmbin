@@ -1,0 +1,31 @@
+apiVersion: embeddedcluster.replicated.com/v1beta1
+kind: Config
+metadata:
+  name: "testconfig"
+spec:
+  version: "__version_string__"
+  binaryOverrideUrl: "__release_url__"
+  metadataOverrideUrl: "__metadata_url__"
+  unsupportedOverrides:
+    builtInExtensions:
+      - name: admin-console
+        values: |
+          labels:
+            release-custom-label: release-clustom-value
+      - name: embedded-cluster-operator
+        values: |
+          global:
+            labels:
+              release-custom-label: release-clustom-value
+    k0s: |
+      config:
+        metadata:
+          name: testing-overrides-k0s-name
+        spec:
+          telemetry:
+            enabled: true
+          workerProfiles:
+          - name: ip-forward
+            values:
+              allowedUnsafeSysctls:
+              - net.ipv4.ip_forward

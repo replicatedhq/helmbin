@@ -1,0 +1,27 @@
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: restore
+  annotations:
+    preserve: me
+spec:
+  backupName: backup
+  includedNamespaces:
+  - '*'
+  hooks:
+    resources:
+    - name: restore-hook-1
+      includedNamespaces:
+      - kotsadm
+      labelSelector:
+        matchLabels:
+          app: example
+      postHooks:
+      - init:
+          initContainers:
+          - name: restore-hook-init1
+            image: proxy.replicated.com/anonymous/nginx:1.24-alpine
+            command:
+            - /bin/ash
+            - -c
+            - echo -n "FOOBARBAZ" > /tmp/foobarbaz

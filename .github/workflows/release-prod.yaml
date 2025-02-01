@@ -304,6 +304,24 @@ jobs:
           export APP_VERSION="appver-${{ github.ref_name }}"
           export RELEASE_YAML_DIR=e2e/kots-release-install	
           ./scripts/ci-release-app.sh
+          
+          # then install a version with alternate unsupported overrides
+          export EC_VERSION="$(git describe --tags --abbrev=4 --match='[0-9]*.[0-9]*.[0-9]*')"
+          export APP_VERSION="appver-${SHORT_SHA}-unsupported-overrides"
+          export RELEASE_YAML_DIR=e2e/kots-release-unsupported-overrides
+          ./scripts/ci-release-app.sh
+          
+          # then install a version with additional failing host preflights
+          export EC_VERSION="$(git describe --tags --abbrev=4 --match='[0-9]*.[0-9]*.[0-9]*')"
+          export APP_VERSION="appver-${SHORT_SHA}-failing-preflights"
+          export RELEASE_YAML_DIR=e2e/kots-release-install-failing-preflights
+          ./scripts/ci-release-app.sh
+          
+          # then install a version with additional warning host preflights
+          export EC_VERSION="$(git describe --tags --abbrev=4 --match='[0-9]*.[0-9]*.[0-9]*')"
+          export APP_VERSION="appver-${SHORT_SHA}-warning-preflights"
+          export RELEASE_YAML_DIR=e2e/kots-release-install-warning-preflights
+          ./scripts/ci-release-app.sh
 
           # then a noop upgrade
           export EC_VERSION="${{ github.ref_name }}"

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: second
+  labels:
+    app: second
+    replicated.com/disaster-recovery: app
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: second
+  template:
+    metadata:
+      labels:
+        app: second
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - second
+                topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: nginx
+          image: proxy.replicated.com/anonymous/nginx:1.24-alpine
+          resources:
+            limits:
+              memory: '32Mi'
+              cpu: '50m'

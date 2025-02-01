@@ -1,0 +1,13 @@
+apiVersion: kots.io/v1beta1
+kind: Config
+spec:
+  groups:
+    - name: config_group
+      title: The First Config Group
+      items:
+        - name: hostname
+          title: Hostname
+          type: text
+        - name: pw
+          title: Password
+          type: password

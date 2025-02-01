@@ -1,0 +1,73 @@
+apiVersion: embeddedcluster.replicated.com/v1beta1
+kind: Config
+metadata:
+  name: "testconfig"
+spec:
+  version: "__version_string__"
+  binaryOverrideUrl: "__release_url__"
+  metadataOverrideUrl: "__metadata_url__"
+  roles:
+    controller:
+      labels:
+        controller-label: controller-label-value
+      name: controller-test
+    custom:
+      - labels:
+          abc-test-label: abc-test-label-value
+          abc-test-label-two: abc-test-label-value-2
+        name: abc
+      - labels:
+          xyz-test-label: xyz-value
+        name: xyz
+  unsupportedOverrides:
+    builtInExtensions:
+      - name: admin-console
+        values: |
+          labels:
+            release-custom-label: release-clustom-value
+      - name: embedded-cluster-operator
+        values: |
+          global:
+            labels:
+              release-custom-label: release-clustom-value
+    k0s: |
+      config:
+        metadata:
+          name: foo
+        spec:
+          telemetry:
+            enabled: false
+  extensions:
+    helm:
+      repositories:
+        - name: ingress-nginx
+          url: https://kubernetes.github.io/ingress-nginx
+        - name: okgolove
+          url: https://okgolove.github.io/helm-charts/
+      charts:
+        - name: ingress-nginx
+          chartname: ingress-nginx/ingress-nginx
+          namespace: ingress-nginx
+          version: "4.11.3"
+          values: |
+            controller:
+              service:
+                type: NodePort
+                nodePorts:
+                  http: "80"
+                  https: "443"
+              image:
+                digest: ""
+                digestChroot: ""
+              admissionWebhooks:
+                patch:
+                  image:
+                    digest: ""
+        - chartname: okgolove/goldpinger
+          name: goldpinger
+          namespace: goldpinger
+          version: 6.1.2
+          order: 11
+          values: |
+            image:
+              repository: proxy.replicated.com/anonymous/bloomberg/goldpinger

@@ -1,0 +1,17 @@
+apiVersion: troubleshoot.replicated.com/v1beta1
+kind: Preflight
+metadata:
+  name: preflight-checks
+spec:
+  collectors:
+    - clusterInfo: {}
+    - clusterResources: {}
+  analyzers:
+    - customResourceDefinition:
+        customResourceDefinitionName: volumesnapshots.snapshot.storage.k8s.io
+        checkName: The Volume Snapshots CRD exists
+        outcomes:
+          - fail:
+              message: The Volume Snapshots CRD does not exist.
+          - pass:
+              message: The Volume Snapshots CRD exists.

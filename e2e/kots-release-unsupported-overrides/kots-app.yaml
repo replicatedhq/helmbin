@@ -1,0 +1,16 @@
+---
+apiVersion: kots.io/v1beta1
+kind: Application
+metadata:
+  name: nginx
+spec:
+  title: Embedded Cluster Smoke Test Staging App
+  icon: https://raw.githubusercontent.com/cncf/artwork/master/projects/kubernetes/icon/color/kubernetes-icon-color.png
+  allowRollback: true
+  statusInformers:
+    - deployment/nginx
+  ports:
+    - serviceName: "nginx"
+      servicePort: 80
+      localPort: 8888
+      applicationUrl: "http://nginx"
