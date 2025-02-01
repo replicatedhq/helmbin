@@ -16,24 +16,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (s *SeaweedFS) Install(ctx context.Context, kcli client.Client, hcli *helm.Helm, writer *spinner.MessageWriter) error {
-	if err := s.prepare(); err != nil {
-		return errors.Wrap(err, "prepare seaweedfs")
-	}
-
+func (s *SeaweedFS) Install(ctx context.Context, kcli client.Client, hcli *helm.Helm, overrides []string, writer *spinner.MessageWriter) error {
 	if err := s.createPreRequisites(ctx, kcli); err != nil {
 		return errors.Wrap(err, "create prerequisites")
 	}
 
-	_, err := hcli.Install(ctx, helm.InstallOptions{
+	values, err := s.GenerateHelmValues(ctx, kcli, overrides)
+	if err != nil {
+		return errors.Wrap(err, "generate helm values")
+	}
+
+	_, err = hcli.Install(ctx, helm.InstallOptions{
 		ReleaseName:  releaseName,
 		ChartPath:    Metadata.Location,
 		ChartVersion: Metadata.Version,
-		Values:       helmValues,
+		Values:       values,
 		Namespace:    namespace,
 	})
 	if err != nil {
-		return errors.Wrap(err, "install seaweedfs")
+		return errors.Wrap(err, "install")
 	}
 
 	return nil

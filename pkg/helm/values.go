@@ -3,9 +3,11 @@ package helm
 import (
 	"fmt"
 
+	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/k0sproject/dig"
 	"github.com/ohler55/ojg/jp"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
+	k8syaml "sigs.k8s.io/yaml"
 )
 
 func UnmarshalValues(valuesYaml string) (map[string]interface{}, error) {
@@ -53,4 +55,46 @@ func GetValue(values map[string]interface{}, path string) (interface{}, error) {
 		return nil, fmt.Errorf("value not found in path %q", path)
 	}
 	return v[0], nil
+}
+
+func PatchValues(values map[string]interface{}, patchYAML string) (map[string]interface{}, error) {
+	if len(patchYAML) == 0 {
+		return values, nil
+	}
+
+	// convert original values to JSON
+	originalYAML, err := MarshalValues(values)
+	if err != nil {
+		return nil, fmt.Errorf("marshal original values: %w", err)
+	}
+	originalJSON, err := k8syaml.YAMLToJSON([]byte(originalYAML))
+	if err != nil {
+		return nil, fmt.Errorf("convert original values to json: %w", err)
+	}
+
+	// convert patch to JSON
+	patchJSON, err := k8syaml.YAMLToJSON([]byte(patchYAML))
+	if err != nil {
+		return nil, fmt.Errorf("convert patch to json: %w", err)
+	}
+
+	// apply as JSON merge patch
+	resultJSON, err := jsonpatch.MergePatch(originalJSON, patchJSON)
+	if err != nil {
+		return nil, fmt.Errorf("patch values: %w", err)
+	}
+
+	// convert result back to YAML
+	resultYAML, err := k8syaml.JSONToYAML(resultJSON)
+	if err != nil {
+		return nil, fmt.Errorf("convert patched values to yaml: %w", err)
+	}
+
+	// unmarshal result back to map
+	result, err := UnmarshalValues(string(resultYAML))
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal patched values: %w", err)
+	}
+
+	return result, nil
 }

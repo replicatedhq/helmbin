@@ -7,18 +7,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"time"
 
 	k0sconfig "github.com/k0sproject/k0s/pkg/apis/k0s/v1beta1"
 	"github.com/replicatedhq/embedded-cluster/cmd/installer/goods"
 	"github.com/replicatedhq/embedded-cluster/cmd/installer/kotscli"
-	eckinds "github.com/replicatedhq/embedded-cluster/kinds/apis/v1beta1"
 	ecv1beta1 "github.com/replicatedhq/embedded-cluster/kinds/apis/v1beta1"
-	"github.com/replicatedhq/embedded-cluster/kinds/types"
 	"github.com/replicatedhq/embedded-cluster/pkg/addons"
-	"github.com/replicatedhq/embedded-cluster/pkg/addons/adminconsole"
-	"github.com/replicatedhq/embedded-cluster/pkg/addons/embeddedclusteroperator"
 	"github.com/replicatedhq/embedded-cluster/pkg/airgap"
 	"github.com/replicatedhq/embedded-cluster/pkg/config"
 	"github.com/replicatedhq/embedded-cluster/pkg/configutils"
@@ -26,7 +21,6 @@ import (
 	"github.com/replicatedhq/embedded-cluster/pkg/helpers"
 	"github.com/replicatedhq/embedded-cluster/pkg/helpers/systemd"
 	"github.com/replicatedhq/embedded-cluster/pkg/k0s"
-	"github.com/replicatedhq/embedded-cluster/pkg/manager"
 	"github.com/replicatedhq/embedded-cluster/pkg/metrics"
 	"github.com/replicatedhq/embedded-cluster/pkg/netutils"
 	"github.com/replicatedhq/embedded-cluster/pkg/preflights"
@@ -35,7 +29,6 @@ import (
 	"github.com/replicatedhq/embedded-cluster/pkg/release"
 	"github.com/replicatedhq/embedded-cluster/pkg/runtimeconfig"
 	"github.com/replicatedhq/embedded-cluster/pkg/spinner"
-	"github.com/replicatedhq/embedded-cluster/pkg/versions"
 	kotsv1beta1 "github.com/replicatedhq/kotskinds/apis/kots/v1beta1"
 	"github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
 	"github.com/sirupsen/logrus"
@@ -64,8 +57,9 @@ func InstallCmd(ctx context.Context, name string) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "install",
-		Short: fmt.Sprintf("Install %s", name),
+		Use:    "install-legacy",
+		Short:  fmt.Sprintf("Install %s", name),
+		Hidden: true,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if os.Getuid() != 0 {
 				return fmt.Errorf("install command must be run as root")
@@ -502,8 +496,7 @@ func runOutro(cmd *cobra.Command, applier *addons.Applier, cfg *k0sconfig.Cluste
 	os.Setenv("KUBECONFIG", runtimeconfig.PathToKubeConfig())
 
 	// This metadata should be the same as the artifact from the release without the vendor customizations
-	defaultCfg := config.RenderK0sConfig()
-	metadata, err := gatherVersionMetadata(defaultCfg, false)
+	metadata, err := gatherVersionMetadata(false)
 	if err != nil {
 		return fmt.Errorf("unable to gather release metadata: %w", err)
 	}
@@ -522,125 +515,6 @@ func runOutro(cmd *cobra.Command, applier *addons.Applier, cfg *k0sconfig.Cluste
 		return fmt.Errorf("unable to get network-interface flag: %w", err)
 	}
 	return applier.Outro(cmd.Context(), cfg, eucfg, metadata, networkInterfaceFlag)
-}
-
-// gatherVersionMetadata returns the release metadata for this version of
-// embedded cluster. Release metadata involves the default versions of the
-// components that are included in the release plus the default values used
-// when deploying them.
-func gatherVersionMetadata(k0sCfg *k0sconfig.ClusterConfig, withChannelRelease bool) (*types.ReleaseMetadata, error) {
-	applier := addons.NewApplier(
-		addons.WithoutPrompt(),
-		addons.OnlyDefaults(),
-		addons.Quiet(),
-	)
-
-	additionalCharts := []eckinds.Chart{}
-	additionalRepos := []k0sconfig.Repository{}
-	if withChannelRelease {
-		additionalCharts = config.AdditionalCharts()
-		additionalRepos = config.AdditionalRepositories()
-	}
-
-	versionsMap, err := applier.Versions(additionalCharts)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get versions: %w", err)
-	}
-	versionsMap["Kubernetes"] = versions.K0sVersion
-	versionsMap["Installer"] = versions.Version
-	versionsMap["Troubleshoot"] = versions.TroubleshootVersion
-
-	if withChannelRelease {
-		channelRelease, err := release.GetChannelRelease()
-		if err == nil && channelRelease != nil {
-			versionsMap[runtimeconfig.BinaryName()] = channelRelease.VersionLabel
-		}
-	}
-
-	sha, err := goods.K0sBinarySHA256()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get k0s binary sha256: %w", err)
-	}
-
-	artifacts := map[string]string{
-		"k0s":                         fmt.Sprintf("k0s-binaries/%s-%s", versions.K0sVersion, runtime.GOARCH),
-		"kots":                        fmt.Sprintf("kots-binaries/%s-%s.tar.gz", adminconsole.KotsVersion, runtime.GOARCH),
-		"manager":                     fmt.Sprintf("manager-binaries/%s-%s.tar.gz", versions.Version, runtime.GOARCH),
-		"operator":                    fmt.Sprintf("operator-binaries/%s-%s.tar.gz", embeddedclusteroperator.Metadata.Version, runtime.GOARCH),
-		"local-artifact-mirror-image": versions.LocalArtifactMirrorImage,
-	}
-	if versions.K0sBinaryURLOverride != "" {
-		artifacts["k0s"] = versions.K0sBinaryURLOverride
-	}
-	if versions.KOTSBinaryURLOverride != "" {
-		artifacts["kots"] = versions.KOTSBinaryURLOverride
-	}
-	if versions.ManagerBinaryURLOverride != "" {
-		artifacts["manager"] = versions.ManagerBinaryURLOverride
-	}
-	if versions.OperatorBinaryURLOverride != "" {
-		artifacts["operator"] = versions.OperatorBinaryURLOverride
-	}
-
-	meta := types.ReleaseMetadata{
-		Versions:  versionsMap,
-		K0sSHA:    sha,
-		Artifacts: artifacts,
-	}
-
-	chtconfig, repconfig, err := applier.GenerateHelmConfigs(
-		k0sCfg,
-		additionalCharts,
-		additionalRepos,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("unable to apply addons: %w", err)
-	}
-
-	meta.Configs = eckinds.Helm{
-		ConcurrencyLevel: 1,
-		Charts:           chtconfig,
-		Repositories:     repconfig,
-	}
-
-	protectedFields, err := applier.ProtectedFields()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get protected fields: %w", err)
-	}
-	meta.Protected = protectedFields
-
-	// Additional builtin addons
-	builtinCharts, err := applier.GetBuiltinCharts(k0sCfg)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get builtin charts: %w", err)
-	}
-	meta.BuiltinConfigs = builtinCharts
-
-	meta.K0sImages = config.ListK0sImages(k0sCfg)
-
-	additionalImages, err := applier.GetAdditionalImages()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get additional images: %w", err)
-	}
-	meta.K0sImages = append(meta.K0sImages, additionalImages...)
-
-	meta.K0sImages = helpers.UniqueStringSlice(meta.K0sImages)
-	sort.Strings(meta.K0sImages)
-
-	meta.Images = config.ListK0sImages(k0sCfg)
-
-	images, err := applier.GetImages()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get images: %w", err)
-	}
-	meta.Images = append(meta.Images, images...)
-
-	meta.Images = append(meta.Images, versions.LocalArtifactMirrorImage)
-
-	meta.Images = helpers.UniqueStringSlice(meta.Images)
-	sort.Strings(meta.Images)
-
-	return &meta, nil
 }
 
 // createK0sConfig creates a new k0s.yaml configuration file. The file is saved in the
@@ -826,15 +700,6 @@ func installAndEnableLocalArtifactMirror() error {
 	}
 	if _, err := helpers.RunCommand("systemctl", "enable", "local-artifact-mirror"); err != nil {
 		return fmt.Errorf("unable to start the local artifact mirror service: %w", err)
-	}
-	return nil
-}
-
-// installAndEnableManager installs and enables the manager. This service is
-// responsible for managing the embedded cluster after the initial installation.
-func installAndEnableManager(ctx context.Context) error {
-	if err := manager.Install(ctx, logrus.Debugf); err != nil {
-		return fmt.Errorf("failed to install manager service: %w", err)
 	}
 	return nil
 }

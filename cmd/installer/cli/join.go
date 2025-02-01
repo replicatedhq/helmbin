@@ -37,9 +37,10 @@ func JoinCmd(ctx context.Context, name string) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "join <url> <token>",
-		Short: fmt.Sprintf("Join %s", name),
-		Args:  cobra.ExactArgs(2),
+		Use:    "join-legacy <url> <token>",
+		Short:  fmt.Sprintf("Join %s", name),
+		Args:   cobra.ExactArgs(2),
+		Hidden: true,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if os.Getuid() != 0 {
 				return fmt.Errorf("join command must be run as root")
@@ -263,13 +264,6 @@ func JoinCmd(ctx context.Context, name string) *cobra.Command {
 
 			if err := waitForNode(cmd.Context(), kcli, hostname); err != nil {
 				err := fmt.Errorf("unable to wait for node: %w", err)
-				metrics.ReportJoinFailed(cmd.Context(), jcmd.InstallationSpec.MetricsBaseURL, jcmd.ClusterID, err)
-				return err
-			}
-
-			logrus.Debugf("installing manager")
-			if err := installAndEnableManager(cmd.Context()); err != nil {
-				err := fmt.Errorf("unable to install and enable manager: %w", err)
 				metrics.ReportJoinFailed(cmd.Context(), jcmd.InstallationSpec.MetricsBaseURL, jcmd.ClusterID, err)
 				return err
 			}

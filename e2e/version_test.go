@@ -112,7 +112,7 @@ func TestVersion(t *testing.T) {
 		}
 	}
 
-	expectedCharts := []string{"openebs", "embedded-cluster-operator", "admin-console", "ingress-nginx", "goldpinger"}
+	expectedCharts := []string{"openebs", "embedded-cluster-operator", "admin-console", "velero", "seaweedfs", "docker-registry", "ingress-nginx", "goldpinger"}
 	if len(parsed.Configs.Charts) != len(expectedCharts) {
 		t.Log(output)
 		t.Fatalf("found %d charts in metadata, expected %d", len(parsed.Configs.Charts), len(expectedCharts))
@@ -132,39 +132,7 @@ func TestVersion(t *testing.T) {
 		}
 	}
 
-	expectedBuiltinConfigsCharts := []string{"velero", "seaweedfs", "registry", "registry-ha"}
-	if len(parsed.BuiltinConfigs) != len(expectedBuiltinConfigsCharts) {
-		t.Log(output)
-		t.Fatalf("found %d builtin charts in metadata, expected %d", len(parsed.BuiltinConfigs), len(expectedBuiltinConfigsCharts))
-	}
-	for _, expectedName := range expectedBuiltinConfigsCharts {
-		if _, ok := parsed.BuiltinConfigs[expectedName]; !ok {
-			t.Errorf("failed to find builtin chart %s in 'metadata' output", expectedName)
-			failed = true
-		}
-	}
-
-	expectedVeleroCharts := []string{"velero"}
-	if len(parsed.BuiltinConfigs["velero"].Charts) != len(expectedVeleroCharts) {
-		t.Log(output)
-		t.Fatalf("found %d velero charts in metadata, expected %d", len(parsed.BuiltinConfigs["velero"].Charts), len(expectedVeleroCharts))
-	}
-
-	for _, expectedName := range expectedVeleroCharts {
-		foundName := false
-		for _, foundChart := range parsed.BuiltinConfigs["velero"].Charts {
-			if foundChart.Name == expectedName {
-				foundName = true
-				break
-			}
-		}
-		if !foundName {
-			t.Errorf("failed to find velero chart %s in 'metadata' output", expectedName)
-			failed = true
-		}
-	}
-
-	expectedArtifacts := []string{"k0s", "kots", "manager", "operator", "local-artifact-mirror-image"}
+	expectedArtifacts := []string{"k0s", "kots", "operator", "local-artifact-mirror-image"}
 	if len(parsed.Artifacts) != len(expectedArtifacts) {
 		t.Log(output)
 		t.Fatalf("found %d artifacts in metadata, expected %d", len(parsed.Artifacts), len(expectedArtifacts))

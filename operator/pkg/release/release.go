@@ -14,9 +14,7 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/replicatedhq/embedded-cluster/kinds/apis/v1beta1"
 	ectypes "github.com/replicatedhq/embedded-cluster/kinds/types"
-	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -35,27 +33,6 @@ func LocalVersionMetadataConfigmap(version string) types.NamespacedName {
 		Name:      fmt.Sprintf("version-metadata-%s", version),
 		Namespace: "embedded-cluster",
 	}
-}
-
-// configureRegistryTLS makes sure that the docker-registry values contains an entry for the
-// tls secret. this function should be called only if the tls secret exists.
-func configureRegistryTLS(meta *ectypes.ReleaseMetadata, ext *v1beta1.Helm) error {
-	for i, chart := range ext.Charts {
-		if chart.Name != "docker-registry" {
-			continue
-		}
-		var values map[string]interface{}
-		if err := yaml.Unmarshal([]byte(chart.Values), &values); err != nil {
-			return fmt.Errorf("failed to unmarshal registry chart values: %w", err)
-		}
-		values["tlsSecretName"] = "registry-tls"
-		newValues, err := yaml.Marshal(values)
-		if err != nil {
-			return fmt.Errorf("unable to marshal new registry chart values: %w", err)
-		}
-		ext.Charts[i].Values = string(newValues)
-	}
-	return nil
 }
 
 // MetadataFor determines from where to read the metadata (from the cluster or remotely) and calls
@@ -93,32 +70,6 @@ func localMetadataFor(ctx context.Context, cli client.Client, version string) (*
 	meta := &ectypes.ReleaseMetadata{}
 	if err := json.Unmarshal([]byte(data), meta); err != nil {
 		return nil, fmt.Errorf("failed to decode bundle: %w", err)
-	}
-	cache[version] = meta
-
-	var secret corev1.Secret
-	nsn = types.NamespacedName{Namespace: "registry", Name: "registry-tls"}
-	if err := cli.Get(ctx, nsn, &secret); err != nil {
-		if errors.IsNotFound(err) {
-			return metaFromCache(version)
-		}
-		return nil, fmt.Errorf("failed to get registry tls secret: %w", err)
-	}
-
-	registryExt, ok := meta.BuiltinConfigs["registry"]
-	if ok {
-		err := configureRegistryTLS(meta, &registryExt)
-		if err != nil {
-			return nil, fmt.Errorf("failed to configure registry-ha tls: %w", err)
-		}
-	}
-
-	registryHAExt, ok := meta.BuiltinConfigs["registry-ha"]
-	if ok {
-		err := configureRegistryTLS(meta, &registryHAExt)
-		if err != nil {
-			return nil, fmt.Errorf("failed to configure registry tls: %w", err)
-		}
 	}
 
 	cache[version] = meta

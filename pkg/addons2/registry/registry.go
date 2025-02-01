@@ -7,7 +7,7 @@ import (
 	"github.com/replicatedhq/embedded-cluster/pkg/helpers"
 	"github.com/replicatedhq/embedded-cluster/pkg/release"
 	"github.com/replicatedhq/embedded-cluster/pkg/runtimeconfig"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 )
 
 type Registry struct {
@@ -35,9 +35,8 @@ var (
 	rawmetadata []byte
 	// Metadata is the unmarshal version of rawmetadata.
 	Metadata release.AddonMetadata
-
+	// registryPassword is the password for the registry.
 	registryPassword = helpers.RandString(20)
-	registryAddress  = ""
 )
 
 func init() {
@@ -62,10 +61,24 @@ func (r *Registry) Name() string {
 	return "Registry"
 }
 
+func (r *Registry) ReleaseName() string {
+	return releaseName
+}
+
+func (r *Registry) Namespace() string {
+	return namespace
+}
+
 func GetRegistryPassword() string {
 	return registryPassword
 }
 
-func GetRegistryClusterIP() string {
-	return registryAddress
+// GetRegistryClusterIP returns the cluster IP for the registry service.
+// This function is deterministic.
+func GetRegistryClusterIP(serviceCIDR string) (string, error) {
+	svcIP, err := helpers.GetLowerBandIP(serviceCIDR, lowerBandIPIndex)
+	if err != nil {
+		return "", errors.Wrap(err, "get cluster IP for registry service")
+	}
+	return svcIP.String(), nil
 }

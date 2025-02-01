@@ -78,10 +78,6 @@ func (k *KubeUtils) WaitForKubernetes(ctx context.Context, cli client.Client) <-
 	return errCh
 }
 
-func (k *KubeUtils) WaitAndMarkInstallation(ctx context.Context, cli client.Client, name string, state string) error {
-	return nil
-}
-
 func (k *KubeUtils) KubeClient() (client.Client, error) {
 	return KubeClient()
 }

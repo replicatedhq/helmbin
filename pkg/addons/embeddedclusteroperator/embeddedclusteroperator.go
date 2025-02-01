@@ -257,7 +257,7 @@ func (e *EmbeddedClusterOperator) Outro(ctx context.Context, cli client.Client, 
 		}
 	}
 
-	installation := ecv1beta1.Installation{
+	installation := &ecv1beta1.Installation{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: ecv1beta1.GroupVersion.String(),
 			Kind:       "Installation",
@@ -284,12 +284,11 @@ func (e *EmbeddedClusterOperator) Outro(ctx context.Context, cli client.Client, 
 			},
 		},
 	}
-	if err := cli.Create(ctx, &installation); err != nil {
+	if err := cli.Create(ctx, installation); err != nil {
 		return fmt.Errorf("unable to create installation: %w", err)
 	}
 
-	// we wait for the installation to exist here because items do not show up in the apiserver instantaneously after being created
-	if err := kubeutils.WaitAndMarkInstallation(ctx, cli, installation.Name, ecv1beta1.InstallationStateKubernetesInstalled); err != nil {
+	if err := kubeutils.SetInstallationState(ctx, cli, installation, ecv1beta1.InstallationStateKubernetesInstalled, "Kubernetes installed"); err != nil {
 		return fmt.Errorf("unable to wait and mark installation: %w", err)
 	}
 

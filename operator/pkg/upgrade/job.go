@@ -9,12 +9,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/k0sproject/k0s/pkg/apis/autopilot/v1beta2"
-	clusterv1beta1 "github.com/replicatedhq/embedded-cluster/kinds/apis/v1beta1"
+	ecv1beta1 "github.com/replicatedhq/embedded-cluster/kinds/apis/v1beta1"
 	"github.com/replicatedhq/embedded-cluster/operator/pkg/artifacts"
 	"github.com/replicatedhq/embedded-cluster/operator/pkg/autopilot"
 	"github.com/replicatedhq/embedded-cluster/operator/pkg/k8sutil"
 	"github.com/replicatedhq/embedded-cluster/operator/pkg/metadata"
 	"github.com/replicatedhq/embedded-cluster/operator/pkg/release"
+	"github.com/replicatedhq/embedded-cluster/pkg/runtimeconfig"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -27,17 +28,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+const (
+	upgradeJobName      = "embedded-cluster-upgrade-%s"
+	upgradeJobNamespace = runtimeconfig.KotsadmNamespace
+	upgradeJobConfigMap = "upgrade-job-configmap-%s"
+)
+
 // CreateUpgradeJob creates a job that upgrades the embedded cluster to the version specified in the installation.
 // if the installation is airgapped, the artifacts are copied to the nodes and the autopilot plan is
 // created to copy the images to the cluster. A configmap is then created containing the target installation
 // spec and the upgrade job is created. The upgrade job will update the cluster version, and then update the operator chart.
 func CreateUpgradeJob(
-	ctx context.Context, cli client.Client, in *clusterv1beta1.Installation,
+	ctx context.Context, cli client.Client, in *ecv1beta1.Installation,
 	localArtifactMirrorImage string, previousInstallVersion string,
 ) error {
 	// check if the job already exists - if it does, we've already rolled out images and can return now
 	job := &batchv1.Job{}
-	err := cli.Get(ctx, client.ObjectKey{Namespace: "embedded-cluster", Name: fmt.Sprintf(upgradeJobName, in.Name)}, job)
+	err := cli.Get(ctx, client.ObjectKey{Namespace: upgradeJobNamespace, Name: fmt.Sprintf(upgradeJobName, in.Name)}, job)
 	if err == nil {
 		return nil
 	}
@@ -72,7 +79,7 @@ func CreateUpgradeJob(
 
 	// check if the configmap exists already or if we can just create it
 	existingCm := &corev1.ConfigMap{}
-	err = cli.Get(ctx, client.ObjectKey{Namespace: "embedded-cluster", Name: fmt.Sprintf(upgradeJobConfigMap, in.Name)}, existingCm)
+	err = cli.Get(ctx, client.ObjectKey{Namespace: upgradeJobNamespace, Name: fmt.Sprintf(upgradeJobConfigMap, in.Name)}, existingCm)
 	if err == nil {
 		// if the configmap already exists, update it to have the expected data just in case
 		existingCm.Data["installation.yaml"] = string(installationData)
@@ -85,7 +92,7 @@ func CreateUpgradeJob(
 	} else {
 		cm := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "embedded-cluster",
+				Namespace: upgradeJobNamespace,
 				Name:      fmt.Sprintf(upgradeJobConfigMap, in.Name),
 			},
 			Data: map[string]string{
@@ -103,6 +110,14 @@ func CreateUpgradeJob(
 	}
 
 	env := []corev1.EnvVar{
+		{
+			Name:  "JOB_NAME",
+			Value: fmt.Sprintf(upgradeJobName, in.Name),
+		},
+		{
+			Name:  "JOB_NAMESPACE",
+			Value: upgradeJobNamespace,
+		},
 		{
 			Name:  "SSL_CERT_DIR",
 			Value: "/certs",
@@ -127,7 +142,7 @@ func CreateUpgradeJob(
 	// create the upgrade job
 	job = &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "embedded-cluster",
+			Namespace: upgradeJobNamespace,
 			Name:      fmt.Sprintf(upgradeJobName, in.Name),
 			Labels: map[string]string{
 				"app.kubernetes.io/instance": "embedded-cluster-upgrade",
@@ -135,6 +150,7 @@ func CreateUpgradeJob(
 			},
 		},
 		Spec: batchv1.JobSpec{
+			BackoffLimit: ptr.To[int32](6), // this is the default
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
@@ -143,8 +159,8 @@ func CreateUpgradeJob(
 					},
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy:      corev1.RestartPolicyOnFailure,
-					ServiceAccountName: "embedded-cluster-operator",
+					RestartPolicy:      corev1.RestartPolicyNever,
+					ServiceAccountName: runtimeconfig.KotsadmServiceAccount,
 					Volumes: []corev1.Volume{
 						{
 							Name: "config",
@@ -161,9 +177,19 @@ func CreateUpgradeJob(
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "private-cas",
+										Name: "kotsadm-private-cas",
 									},
 									Optional: ptr.To[bool](true),
+								},
+							},
+						},
+						{
+							Name: "ec-charts-dir",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									// the job gets created by a process inside the kotsadm pod during an upgrade,
+									// and kots doesn't (and shouldn't) have permissions to create this directory
+									Path: runtimeconfig.EmbeddedClusterChartsSubDirNoCreate(),
 								},
 							},
 						},
@@ -191,6 +217,11 @@ func CreateUpgradeJob(
 									Name:      "private-cas",
 									MountPath: "/certs",
 								},
+								{
+									Name:      "ec-charts-dir",
+									MountPath: runtimeconfig.EmbeddedClusterChartsSubDirNoCreate(),
+									ReadOnly:  true,
+								},
 							},
 						},
 					},
@@ -206,7 +237,7 @@ func CreateUpgradeJob(
 	return nil
 }
 
-func operatorImageName(ctx context.Context, cli client.Client, in *clusterv1beta1.Installation) (string, error) {
+func operatorImageName(ctx context.Context, cli client.Client, in *ecv1beta1.Installation) (string, error) {
 	// determine the image to use for the upgrade job
 	meta, err := release.MetadataFor(ctx, in, cli)
 	if err != nil {
@@ -220,7 +251,7 @@ func operatorImageName(ctx context.Context, cli client.Client, in *clusterv1beta
 	return "", fmt.Errorf("no embedded-cluster-operator image found in release metadata")
 }
 
-func airgapDistributeArtifacts(ctx context.Context, cli client.Client, in *clusterv1beta1.Installation, localArtifactMirrorImage string) error {
+func airgapDistributeArtifacts(ctx context.Context, cli client.Client, in *ecv1beta1.Installation, localArtifactMirrorImage string) error {
 	// in airgap installations let's make sure all assets have been copied to nodes.
 	// this may take some time so we only move forward when 'ready'.
 	err := ensureAirgapArtifactsOnNodes(ctx, cli, in, localArtifactMirrorImage)
@@ -238,7 +269,7 @@ func airgapDistributeArtifacts(ctx context.Context, cli client.Client, in *clust
 	return nil
 }
 
-func ensureAirgapArtifactsOnNodes(ctx context.Context, cli client.Client, in *clusterv1beta1.Installation, localArtifactMirrorImage string) error {
+func ensureAirgapArtifactsOnNodes(ctx context.Context, cli client.Client, in *ecv1beta1.Installation, localArtifactMirrorImage string) error {
 	log := controllerruntime.LoggerFrom(ctx)
 
 	log.Info("Placing artifacts on nodes...")
@@ -294,7 +325,7 @@ func ensureAirgapArtifactsOnNodes(ctx context.Context, cli client.Client, in *cl
 	return nil
 }
 
-func ensureAirgapArtifactsInCluster(ctx context.Context, cli client.Client, in *clusterv1beta1.Installation) error {
+func ensureAirgapArtifactsInCluster(ctx context.Context, cli client.Client, in *ecv1beta1.Installation) error {
 	log := controllerruntime.LoggerFrom(ctx)
 
 	log.Info("Uploading container images...")
@@ -336,7 +367,7 @@ func ensureAirgapArtifactsInCluster(ctx context.Context, cli client.Client, in *
 	return nil
 }
 
-func autopilotEnsureAirgapArtifactsPlan(ctx context.Context, cli client.Client, in *clusterv1beta1.Installation) error {
+func autopilotEnsureAirgapArtifactsPlan(ctx context.Context, cli client.Client, in *ecv1beta1.Installation) error {
 	plan, err := getAutopilotAirgapArtifactsPlan(ctx, cli, in)
 	if err != nil {
 		return fmt.Errorf("get autopilot airgap artifacts plan: %w", err)
@@ -354,7 +385,7 @@ func autopilotEnsureAirgapArtifactsPlan(ctx context.Context, cli client.Client, 
 	return nil
 }
 
-func getAutopilotAirgapArtifactsPlan(ctx context.Context, cli client.Client, in *clusterv1beta1.Installation) (*v1beta2.Plan, error) {
+func getAutopilotAirgapArtifactsPlan(ctx context.Context, cli client.Client, in *ecv1beta1.Installation) (*v1beta2.Plan, error) {
 	var commands []v1beta2.PlanCommand
 
 	// if we are running in an airgap environment all assets are already present in the

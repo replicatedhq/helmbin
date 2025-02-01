@@ -12,24 +12,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (v *Velero) Install(ctx context.Context, kcli client.Client, hcli *helm.Helm, writer *spinner.MessageWriter) error {
-	if err := v.prepare(); err != nil {
-		return errors.Wrap(err, "prepare velero")
-	}
-
+func (v *Velero) Install(ctx context.Context, kcli client.Client, hcli *helm.Helm, overrides []string, writer *spinner.MessageWriter) error {
 	if err := v.createPreRequisites(ctx, kcli); err != nil {
 		return errors.Wrap(err, "create prerequisites")
 	}
 
-	_, err := hcli.Install(ctx, helm.InstallOptions{
+	values, err := v.GenerateHelmValues(ctx, kcli, overrides)
+	if err != nil {
+		return errors.Wrap(err, "generate helm values")
+	}
+
+	_, err = hcli.Install(ctx, helm.InstallOptions{
 		ReleaseName:  releaseName,
 		ChartPath:    Metadata.Location,
 		ChartVersion: Metadata.Version,
-		Values:       helmValues,
+		Values:       values,
 		Namespace:    namespace,
 	})
 	if err != nil {
-		return errors.Wrap(err, "install velero")
+		return errors.Wrap(err, "install")
 	}
 
 	return nil
@@ -71,7 +72,7 @@ func createCredentialsSecret(ctx context.Context, kcli client.Client) error {
 		},
 		Type: "Opaque",
 	}
-	if err := kcli.Create(ctx, &credentialsSecret); err != nil {
+	if err := kcli.Create(ctx, &credentialsSecret); err != nil && !k8serrors.IsAlreadyExists(err) {
 		return errors.Wrap(err, "create credentials secret")
 	}
 

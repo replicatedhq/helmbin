@@ -6,8 +6,9 @@ import (
 	"strings"
 
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/replicatedhq/embedded-cluster/pkg/addons"
 	"github.com/replicatedhq/embedded-cluster/pkg/addons/embeddedclusteroperator"
+	"github.com/replicatedhq/embedded-cluster/pkg/addons2"
+	"github.com/replicatedhq/embedded-cluster/pkg/extensions"
 	"github.com/replicatedhq/embedded-cluster/pkg/versions"
 	"github.com/spf13/cobra"
 )
@@ -27,33 +28,34 @@ func VersionCmd() *cobra.Command {
 }
 
 func printVersions() error {
-	applierVersions, err := addons.NewApplier(
-		addons.WithoutPrompt(),
-		addons.OnlyDefaults(),
-		addons.Quiet(),
-	).Versions(nil)
-	if err != nil {
-		return fmt.Errorf("unable to get versions: %w", err)
-	}
 	writer := table.NewWriter()
 	writer.AppendHeader(table.Row{"component", "version"})
 	writer.AppendRow(table.Row{"Installer", versions.Version})
 	writer.AppendRow(table.Row{"Kubernetes", versions.K0sVersion})
 
+	versionsMap := map[string]string{}
+	for k, v := range addons2.Versions() {
+		versionsMap[k] = v
+	}
+	for k, v := range extensions.Versions() {
+		versionsMap[k] = v
+	}
+
 	keys := []string{}
-	for k := range applierVersions {
+	for k := range versionsMap {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+
 	for _, k := range keys {
-		version := applierVersions[k]
+		version := versionsMap[k]
 		if !strings.HasPrefix(version, "v") {
 			version = fmt.Sprintf("v%s", version)
 		}
 		writer.AppendRow(table.Row{k, version})
 	}
-	fmt.Printf("%s\n", writer.Render())
 
+	fmt.Printf("%s\n", writer.Render())
 	fmt.Printf("The operator chart repository is %s\n", embeddedclusteroperator.Metadata.Location)
 
 	return nil

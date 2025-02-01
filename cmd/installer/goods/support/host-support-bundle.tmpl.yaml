@@ -235,10 +235,6 @@ spec:
       command: "systemctl"
       args: ["cat", "k0sworker.service"]
   - run:
-      collectorName: "systemctl-cat-manager"
-      command: "systemctl"
-      args: ["cat", "{{ .ManagerServiceName }}.service"]
-  - run:
       collectorName: "journalctl-dmesg"
       command: "journalctl"
       args: ["--dmesg", "--no-pager", "-S", "7 days ago"]
@@ -264,10 +260,6 @@ spec:
       collectorName: local-artifact-mirror-logs
       command: journalctl
       args: [ "--since", "2 days ago", "--no-pager", "-u", "local-artifact-mirror.service" ]
-  - run:
-      collectorName: manager-logs
-      command: journalctl
-      args: [ "--since", "2 days ago", "--no-pager", "-u", "{{ .ManagerServiceName }}.service" ]
   - run:
       collectorName: k0s-images-dir
       command: ls

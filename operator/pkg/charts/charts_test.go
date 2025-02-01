@@ -70,7 +70,6 @@ global:
 image:
   repository: docker.io/replicated/embedded-cluster-operator-image
   tag: latest-amd64@sha256:eeed01216b5d2192afbd90e2e1f70419a8758551d8708f9d4b4f50f41d106ce8
-kotsVersion: 1.2.3-admin-console
 utilsImage: abc-repo/ec-utils:latest-amd64@sha256:92dec6e167ff57b35953da389c2f62c8ed9e529fe8dac3c3621269c3a66291f0
 `
 
@@ -86,7 +85,6 @@ image:
   repository: docker.io/replicated/embedded-cluster-operator-image
   tag: latest-amd64@sha256:eeed01216b5d2192afbd90e2e1f70419a8758551d8708f9d4b4f50f41d106ce8
 isAirgap: "true"
-kotsVersion: 1.2.3-admin-console
 utilsImage: abc-repo/ec-utils:latest-amd64@sha256:92dec6e167ff57b35953da389c2f62c8ed9e529fe8dac3c3621269c3a66291f0
 `
 
@@ -108,7 +106,6 @@ global:
 image:
   repository: docker.io/replicated/embedded-cluster-operator-image
   tag: latest-amd64@sha256:eeed01216b5d2192afbd90e2e1f70419a8758551d8708f9d4b4f50f41d106ce8
-kotsVersion: 1.2.3-admin-console
 utilsImage: abc-repo/ec-utils:latest-amd64@sha256:92dec6e167ff57b35953da389c2f62c8ed9e529fe8dac3c3621269c3a66291f0
 `
 
@@ -123,7 +120,6 @@ global:
 image:
   repository: docker.io/replicated/embedded-cluster-operator-image
   tag: latest-amd64@sha256:eeed01216b5d2192afbd90e2e1f70419a8758551d8708f9d4b4f50f41d106ce8
-kotsVersion: 1.2.3-admin-console
 utilsImage: abc-repo/ec-utils:latest-amd64@sha256:92dec6e167ff57b35953da389c2f62c8ed9e529fe8dac3c3621269c3a66291f0
 `
 

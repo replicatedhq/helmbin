@@ -4,11 +4,22 @@ import (
 	_ "embed"
 
 	"github.com/pkg/errors"
+	ecv1beta1 "github.com/replicatedhq/embedded-cluster/kinds/apis/v1beta1"
 	"github.com/replicatedhq/embedded-cluster/pkg/release"
+	"github.com/replicatedhq/embedded-cluster/pkg/versions"
 	"gopkg.in/yaml.v2"
 )
 
-type EmbeddedClusterOperator struct{}
+type EmbeddedClusterOperator struct {
+	IsAirgap              bool
+	Proxy                 *ecv1beta1.ProxySpec
+	ChartLocationOverride string
+	ChartVersionOverride  string
+	BinaryNameOverride    string
+	ImageRepoOverride     string
+	ImageTagOverride      string
+	UtilsImageOverride    string
+}
 
 const (
 	releaseName = "embedded-cluster-operator"
@@ -28,15 +39,41 @@ var (
 
 func init() {
 	if err := yaml.Unmarshal(rawmetadata, &Metadata); err != nil {
-		panic(errors.Wrap(err, "unable to unmarshal metadata"))
+		panic(errors.Wrap(err, "unmarshal metadata"))
 	}
+
 	hv, err := release.RenderHelmValues(rawvalues, Metadata)
 	if err != nil {
-		panic(errors.Wrap(err, "unable to unmarshal values"))
+		panic(errors.Wrap(err, "unmarshal values"))
 	}
 	helmValues = hv
+
+	helmValues["embeddedClusterVersion"] = versions.Version
+	helmValues["embeddedClusterK0sVersion"] = versions.K0sVersion
 }
 
-func (a *EmbeddedClusterOperator) Name() string {
+func (e *EmbeddedClusterOperator) Name() string {
 	return "Embedded Cluster Operator"
+}
+
+func (e *EmbeddedClusterOperator) ReleaseName() string {
+	return releaseName
+}
+
+func (e *EmbeddedClusterOperator) Namespace() string {
+	return namespace
+}
+
+func (e *EmbeddedClusterOperator) ChartLocation() string {
+	if e.ChartLocationOverride != "" {
+		return e.ChartLocationOverride
+	}
+	return Metadata.Location
+}
+
+func (e *EmbeddedClusterOperator) ChartVersion() string {
+	if e.ChartVersionOverride != "" {
+		return e.ChartVersionOverride
+	}
+	return Metadata.Version
 }

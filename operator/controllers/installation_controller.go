@@ -516,13 +516,13 @@ func constructHostPreflightResultsJob(in *v1beta1.Installation, nodeName string)
 
 // Reconcile reconcile the installation object.
 func (r *InstallationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	isV2Enabled := false
+	isV2Enabled := true
 
 	// we start by fetching all installation objects and coalescing them. we
 	// are going to operate only on the newest one (sorting by installation
 	// name).
 	log := ctrl.LoggerFrom(ctx)
-	installs, err := kubeutils.ListCRDInstallations(ctx, r.Client)
+	installs, err := kubeutils.ListInstallations(ctx, r.Client)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to list installations: %w", err)
 	}
@@ -609,7 +609,7 @@ func (r *InstallationReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// save the installation status. nothing more to do with it.
-	if err := r.Status().Update(ctx, in.DeepCopy()); err != nil {
+	if err := r.Status().Update(ctx, in); err != nil {
 		if k8serrors.IsConflict(err) {
 			return ctrl.Result{}, fmt.Errorf("failed to update status: conflict")
 		}

@@ -3,6 +3,7 @@ package migratev2
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"testing"
 
 	ecv1beta1 "github.com/replicatedhq/embedded-cluster/kinds/apis/v1beta1"
@@ -15,6 +16,10 @@ import (
 )
 
 func Test_setV2MigrationInProgress(t *testing.T) {
+	// Discard log messages
+	old := slog.SetLogLoggerLevel(slog.LevelError)
+	defer slog.SetLogLoggerLevel(old)
+
 	scheme := runtime.NewScheme()
 	require.NoError(t, ecv1beta1.AddToScheme(scheme))
 
@@ -76,10 +81,7 @@ func Test_setV2MigrationInProgress(t *testing.T) {
 				WithStatusSubresource(&ecv1beta1.Installation{}).
 				Build()
 
-			// Discard log messages
-			logf := func(format string, args ...any) {}
-
-			err := setV2MigrationInProgress(context.Background(), logf, cli, tt.args.installation)
+			err := setV2MigrationInProgress(context.Background(), cli, tt.args.installation)
 			require.NoError(t, err)
 
 			// Verify that the condition was set correctly
@@ -97,6 +99,10 @@ func Test_setV2MigrationInProgress(t *testing.T) {
 }
 
 func Test_setV2MigrationComplete(t *testing.T) {
+	// Discard log messages
+	old := slog.SetLogLoggerLevel(slog.LevelError)
+	defer slog.SetLogLoggerLevel(old)
+
 	scheme := runtime.NewScheme()
 	require.NoError(t, ecv1beta1.AddToScheme(scheme))
 
@@ -156,11 +162,7 @@ func Test_setV2MigrationComplete(t *testing.T) {
 				WithObjects(tt.args.installation).
 				WithStatusSubresource(&ecv1beta1.Installation{}).
 				Build()
-
-			// Discard log messages
-			logf := func(format string, args ...any) {}
-
-			err := setV2MigrationComplete(context.Background(), logf, cli, tt.args.installation)
+			err := setV2MigrationComplete(context.Background(), cli, tt.args.installation)
 			require.NoError(t, err)
 
 			// Verify that the condition was set correctly
@@ -178,6 +180,10 @@ func Test_setV2MigrationComplete(t *testing.T) {
 }
 
 func Test_setV2MigrationFailed(t *testing.T) {
+	// Discard log messages
+	old := slog.SetLogLoggerLevel(slog.LevelError)
+	defer slog.SetLogLoggerLevel(old)
+
 	scheme := runtime.NewScheme()
 	require.NoError(t, ecv1beta1.AddToScheme(scheme))
 
@@ -241,10 +247,7 @@ func Test_setV2MigrationFailed(t *testing.T) {
 				WithStatusSubresource(&ecv1beta1.Installation{}).
 				Build()
 
-			// Discard log messages
-			logf := func(format string, args ...any) {}
-
-			err := setV2MigrationFailed(context.Background(), logf, cli, tt.args.installation, tt.args.failure)
+			err := setV2MigrationFailed(context.Background(), cli, tt.args.installation, tt.args.failure)
 			require.NoError(t, err)
 
 			// Verify that the condition was set correctly

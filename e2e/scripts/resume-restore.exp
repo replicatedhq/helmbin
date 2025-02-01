@@ -376,6 +376,14 @@ expect {
 }
 
 expect {
+    -timeout 240 "Extensions installed!" {}
+    timeout {
+      puts "\n\nFailed to find 'extensions installed' spinner."
+      exit 1
+    }
+}
+
+expect {
     "Restoring application" {}
     timeout {
       puts "\n\nFailed to find 'restoring application' spinner."

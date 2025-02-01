@@ -73,6 +73,12 @@ func EmbeddedClusterChartsSubDir() string {
 	return path
 }
 
+// EmbeddedClusterChartsSubDirNoCreate returns the path to the directory where embedded-cluster helm charts
+// are stored without creating the directory if it does not exist.
+func EmbeddedClusterChartsSubDirNoCreate() string {
+	return filepath.Join(EmbeddedClusterHomeDirectory(), "charts")
+}
+
 // EmbeddedClusterImagesSubDir returns the path to the directory where docker images are stored.
 func EmbeddedClusterImagesSubDir() string {
 	path := filepath.Join(EmbeddedClusterHomeDirectory(), "images")

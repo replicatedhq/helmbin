@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	k0sconfig "github.com/k0sproject/k0s/pkg/apis/k0s/v1beta1"
 	k0sv1beta1 "github.com/k0sproject/k0s/pkg/apis/k0s/v1beta1"
 	"github.com/replicatedhq/embedded-cluster/pkg/airgap"
 	"github.com/replicatedhq/embedded-cluster/pkg/config"
@@ -56,7 +55,7 @@ func IsInstalled() (bool, error) {
 // WriteK0sConfig creates a new k0s.yaml configuration file. The file is saved in the
 // global location (as returned by runtimeconfig.PathToK0sConfig()). If a file already sits
 // there, this function returns an error.
-func WriteK0sConfig(ctx context.Context, networkInterface string, airgapBundle string, podCIDR string, serviceCIDR string, overrides string, mutate func(*k0sv1beta1.ClusterConfig) error) (*k0sconfig.ClusterConfig, error) {
+func WriteK0sConfig(ctx context.Context, networkInterface string, airgapBundle string, podCIDR string, serviceCIDR string, overrides string, mutate func(*k0sv1beta1.ClusterConfig) error) (*k0sv1beta1.ClusterConfig, error) {
 	cfgpath := runtimeconfig.PathToK0sConfig()
 	if _, err := os.Stat(cfgpath); err == nil {
 		return nil, fmt.Errorf("configuration file already exists")
@@ -82,7 +81,7 @@ func WriteK0sConfig(ctx context.Context, networkInterface string, airgapBundle s
 		}
 	}
 
-	cfg, err = applyUnsupportedOverrides(ctx, overrides, cfg)
+	cfg, err = applyUnsupportedOverrides(cfg, overrides)
 	if err != nil {
 		return nil, fmt.Errorf("unable to apply unsupported overrides: %w", err)
 	}
@@ -110,8 +109,7 @@ func WriteK0sConfig(ctx context.Context, networkInterface string, airgapBundle s
 
 // applyUnsupportedOverrides applies overrides to the k0s configuration. Applies first the
 // overrides embedded into the binary and after the ones provided by the user (--overrides).
-// we first apply the k0s config override and then apply the built in overrides.
-func applyUnsupportedOverrides(ctx context.Context, overrides string, cfg *k0sconfig.ClusterConfig) (*k0sconfig.ClusterConfig, error) {
+func applyUnsupportedOverrides(cfg *k0sv1beta1.ClusterConfig, overrides string) (*k0sv1beta1.ClusterConfig, error) {
 	embcfg, err := release.GetEmbeddedClusterConfig()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get embedded cluster config: %w", err)
@@ -121,10 +119,6 @@ func applyUnsupportedOverrides(ctx context.Context, overrides string, cfg *k0sco
 		cfg, err = config.PatchK0sConfig(cfg, overrides)
 		if err != nil {
 			return nil, fmt.Errorf("unable to patch k0s config: %w", err)
-		}
-		cfg, err = config.ApplyBuiltInExtensionsOverrides(cfg, embcfg)
-		if err != nil {
-			return nil, fmt.Errorf("unable to release built in overrides: %w", err)
 		}
 	}
 
@@ -138,10 +132,6 @@ func applyUnsupportedOverrides(ctx context.Context, overrides string, cfg *k0sco
 		if err != nil {
 			return nil, fmt.Errorf("unable to apply overrides: %w", err)
 		}
-		cfg, err = config.ApplyBuiltInExtensionsOverrides(cfg, eucfg)
-		if err != nil {
-			return nil, fmt.Errorf("unable to end user built in overrides: %w", err)
-		}
 	}
 
 	return cfg, nil
@@ -152,7 +142,7 @@ func PatchK0sConfig(path string, patch string) error {
 	if len(patch) == 0 {
 		return nil
 	}
-	finalcfg := k0sconfig.ClusterConfig{
+	finalcfg := k0sv1beta1.ClusterConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: runtimeconfig.BinaryName()},
 	}
 	if _, err := os.Stat(path); err == nil {
@@ -160,7 +150,7 @@ func PatchK0sConfig(path string, patch string) error {
 		if err != nil {
 			return fmt.Errorf("unable to read node config: %w", err)
 		}
-		finalcfg = k0sconfig.ClusterConfig{}
+		finalcfg = k0sv1beta1.ClusterConfig{}
 		if err := k8syaml.Unmarshal(data, &finalcfg); err != nil {
 			return fmt.Errorf("unable to unmarshal node config: %w", err)
 		}
@@ -171,13 +161,13 @@ func PatchK0sConfig(path string, patch string) error {
 	}
 	if result.Spec.API != nil {
 		if finalcfg.Spec == nil {
-			finalcfg.Spec = &k0sconfig.ClusterSpec{}
+			finalcfg.Spec = &k0sv1beta1.ClusterSpec{}
 		}
 		finalcfg.Spec.API = result.Spec.API
 	}
 	if result.Spec.Storage != nil {
 		if finalcfg.Spec == nil {
-			finalcfg.Spec = &k0sconfig.ClusterSpec{}
+			finalcfg.Spec = &k0sv1beta1.ClusterSpec{}
 		}
 		finalcfg.Spec.Storage = result.Spec.Storage
 	}

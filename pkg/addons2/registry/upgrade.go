@@ -2,12 +2,11 @@ package registry
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/replicatedhq/embedded-cluster/pkg/addons2/seaweedfs"
 	"github.com/replicatedhq/embedded-cluster/pkg/helm"
-	"github.com/replicatedhq/embedded-cluster/pkg/runtimeconfig"
-	"github.com/replicatedhq/embedded-cluster/pkg/versions"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,28 +19,26 @@ const (
 	s3SecretName = "seaweedfs-s3-rw"
 )
 
-func (r *Registry) Upgrade(ctx context.Context, kcli client.Client) error {
-	if err := r.prepare(); err != nil {
-		return errors.Wrap(err, "prepare registry")
+func (r *Registry) Upgrade(ctx context.Context, kcli client.Client, hcli *helm.Helm, overrides []string) error {
+	exists, err := hcli.ReleaseExists(ctx, namespace, releaseName)
+	if err != nil {
+		return errors.Wrap(err, "check if release exists")
+	}
+	if !exists {
+		fmt.Printf("%s release not found in %s namespace, installing\n", releaseName, namespace)
+		if err := r.Install(ctx, kcli, hcli, overrides, nil); err != nil {
+			return errors.Wrap(err, "install")
+		}
+		return nil
 	}
 
 	if err := r.createUpgradePreRequisites(ctx, kcli); err != nil {
 		return errors.Wrap(err, "create prerequisites")
 	}
 
-	hcli, err := helm.NewHelm(helm.HelmOptions{
-		KubeConfig: runtimeconfig.PathToKubeConfig(),
-		K0sVersion: versions.K0sVersion,
-	})
+	values, err := r.GenerateHelmValues(ctx, kcli, overrides)
 	if err != nil {
-		return errors.Wrap(err, "create helm client")
-	}
-
-	var values map[string]interface{}
-	if r.IsHA {
-		values = helmValuesHA
-	} else {
-		values = helmValues
+		return errors.Wrap(err, "generate helm values")
 	}
 
 	_, err = hcli.Upgrade(ctx, helm.UpgradeOptions{
@@ -53,15 +50,17 @@ func (r *Registry) Upgrade(ctx context.Context, kcli client.Client) error {
 		Force:        false,
 	})
 	if err != nil {
-		return errors.Wrap(err, "upgrade registry")
+		return errors.Wrap(err, "upgrade")
 	}
 
 	return nil
 }
 
 func (r *Registry) createUpgradePreRequisites(ctx context.Context, kcli client.Client) error {
-	if err := createS3Secret(ctx, kcli); err != nil {
-		return errors.Wrap(err, "create s3 secret")
+	if r.IsHA {
+		if err := createS3Secret(ctx, kcli); err != nil {
+			return errors.Wrap(err, "create s3 secret")
+		}
 	}
 
 	return nil

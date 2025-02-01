@@ -44,30 +44,42 @@ func CanEnableHA(ctx context.Context, kcli client.Client) (bool, error) {
 }
 
 // EnableHA enables high availability.
-func EnableHA(ctx context.Context, kcli client.Client, isAirgap bool, serviceCIDR string, proxy *ecv1beta1.ProxySpec) error {
+func EnableHA(ctx context.Context, kcli client.Client, isAirgap bool, serviceCIDR string, proxy *ecv1beta1.ProxySpec, cfgspec *ecv1beta1.ConfigSpec) error {
 	loading := spinner.Start()
 	defer loading.Close()
+
+	airgapChartsPath := ""
+	if isAirgap {
+		airgapChartsPath = runtimeconfig.EmbeddedClusterChartsSubDir()
+	}
+
+	hcli, err := helm.NewHelm(helm.HelmOptions{
+		KubeConfig: runtimeconfig.PathToKubeConfig(),
+		K0sVersion: versions.K0sVersion,
+		AirgapPath: airgapChartsPath,
+	})
+	if err != nil {
+		return errors.Wrap(err, "create helm client")
+	}
 
 	if isAirgap {
 		loading.Infof("Enabling high availability")
 
-		// install the helm chart
-		hcli, err := helm.NewHelm(helm.HelmOptions{
-			KubeConfig: runtimeconfig.PathToKubeConfig(),
-			K0sVersion: versions.K0sVersion,
-			AirgapPath: runtimeconfig.EmbeddedClusterChartsSubDir(),
-		})
-		if err != nil {
-			return errors.Wrap(err, "create helm client")
-		}
-
+		// TODO (@salah): add support for end user overrides
 		sw := &seaweedfs.SeaweedFS{
 			ServiceCIDR: serviceCIDR,
 		}
-		if err := sw.Install(ctx, kcli, hcli, nil); err != nil {
-			return errors.Wrap(err, "install seaweedfs")
+		exists, err := hcli.ReleaseExists(ctx, sw.Namespace(), sw.ReleaseName())
+		if err != nil {
+			return errors.Wrap(err, "check if seaweedfs release exists")
+		}
+		if !exists {
+			if err := sw.Install(ctx, kcli, hcli, addOnOverrides(sw, cfgspec, nil), nil); err != nil {
+				return errors.Wrap(err, "install seaweedfs")
+			}
 		}
 
+		// TODO (@salah): add support for end user overrides
 		reg := &registry.Registry{
 			ServiceCIDR: serviceCIDR,
 			IsHA:        true,
@@ -75,19 +87,21 @@ func EnableHA(ctx context.Context, kcli client.Client, isAirgap bool, serviceCID
 		if err := reg.Migrate(ctx, kcli, loading); err != nil {
 			return errors.Wrap(err, "migrate registry data")
 		}
-		if err := reg.Upgrade(ctx, kcli); err != nil {
+		if err := reg.Upgrade(ctx, kcli, hcli, addOnOverrides(reg, cfgspec, nil)); err != nil {
 			return errors.Wrap(err, "upgrade registry")
 		}
 	}
 
 	loading.Infof("Updating the Admin Console for high availability")
 
+	// TODO (@salah): add support for end user overrides
 	ac := &adminconsole.AdminConsole{
-		IsAirgap: isAirgap,
-		IsHA:     true,
-		Proxy:    proxy,
+		IsAirgap:    isAirgap,
+		IsHA:        true,
+		Proxy:       proxy,
+		ServiceCIDR: serviceCIDR,
 	}
-	if err := ac.Upgrade(ctx, kcli); err != nil {
+	if err := ac.Upgrade(ctx, kcli, hcli, addOnOverrides(ac, cfgspec, nil)); err != nil {
 		return errors.Wrap(err, "upgrade admin console")
 	}
 
@@ -95,9 +109,10 @@ func EnableHA(ctx context.Context, kcli client.Client, isAirgap bool, serviceCID
 	if err != nil {
 		return errors.Wrap(err, "get latest installation")
 	}
-	in.Spec.HighAvailability = true
 
-	if err := kubeutils.UpdateInstallation(ctx, kcli, in); err != nil {
+	if err := kubeutils.UpdateInstallation(ctx, kcli, in, func(in *ecv1beta1.Installation) {
+		in.Spec.HighAvailability = true
+	}); err != nil {
 		return errors.Wrap(err, "update installation")
 	}
 

@@ -29,8 +29,8 @@ spec:
       limits:
         maxAge: 720h
   - logs:
-      name: podlogs/embedded-cluster-operator
-      namespace: embedded-cluster
+      name: podlogs/embedded-cluster-upgrade
+      namespace: kotsadm
       selector:
         - app.kubernetes.io/name=embedded-cluster-upgrade
       limits:

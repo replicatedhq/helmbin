@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/replicatedhq/embedded-cluster/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -17,9 +16,7 @@ func VersionListImagesCmd(ctx context.Context, name string) *cobra.Command {
 		Use:   "list-images",
 		Short: "List images embedded in the cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			k0sCfg := config.RenderK0sConfig()
-
-			metadata, err := gatherVersionMetadata(k0sCfg, !omitReleaseMetadata)
+			metadata, err := gatherVersionMetadata(!omitReleaseMetadata)
 			if err != nil {
 				return fmt.Errorf("failed to gather version metadata: %w", err)
 			}

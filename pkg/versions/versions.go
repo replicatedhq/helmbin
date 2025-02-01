@@ -20,9 +20,6 @@ var (
 	// KOTSBinaryURLOverride is used to override the KOTS binary url and is set at compile time
 	// using LD_FLAGS in the Makefile
 	KOTSBinaryURLOverride string
-	// ManagerBinaryURLOverride is used to override the Manager binary url and is set at compile
-	// time using LD_FLAGS in the Makefile
-	ManagerBinaryURLOverride string
 	// OperatorBinaryURLOverride is used to override the Operator binary url and is set at compile
 	// time using LD_FLAGS in the Makefile
 	OperatorBinaryURLOverride string

@@ -68,23 +68,6 @@ function k0sbin() {
     fi
 }
 
-function managerbin() {
-    local manager_version=""
-
-    if [ ! -f "operator/build/image-$EC_VERSION" ]; then
-        fail "file operator/build/image-$EC_VERSION not found"
-    fi
-
-    if [ ! -f "build/manager-linux-$ARCH.tgz" ]; then
-        fail "file build/manager-linux-$ARCH.tgz not found"
-    fi
-
-    manager_version="${EC_VERSION}"
-
-    # upload the binary to the bucket
-    retry 3 aws s3 cp --no-progress "build/manager-linux-$ARCH.tgz" "s3://${S3_BUCKET}/manager-binaries/${manager_version}-${ARCH}.tar.gz"
-}
-
 function operatorbin() {
     local operator_image=""
     local operator_version=""
@@ -185,7 +168,6 @@ function main() {
     if [ "${UPLOAD_BINARIES}" == "1" ]; then
         mkdir -p build
         k0sbin
-        managerbin
         operatorbin
         kotsbin
         embeddedcluster

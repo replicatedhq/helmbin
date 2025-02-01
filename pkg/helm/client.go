@@ -3,6 +3,7 @@ package helm
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -24,6 +25,7 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/repo"
+	"helm.sh/helm/v3/pkg/storage/driver"
 	"helm.sh/helm/v3/pkg/uploader"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
@@ -293,6 +295,31 @@ func (h *Helm) GetChartMetadata(chartPath string) (*chart.Metadata, error) {
 	return chartRequested.Metadata, nil
 }
 
+// reference: https://github.com/helm/helm/blob/0d66425d9a745d8a289b1a5ebb6ccc744436da95/cmd/helm/upgrade.go#L122-L125
+func (h *Helm) ReleaseExists(ctx context.Context, namespace string, releaseName string) (bool, error) {
+	cfg, err := h.getActionCfg(namespace)
+	if err != nil {
+		return false, fmt.Errorf("get action configuration: %w", err)
+	}
+
+	client := action.NewHistory(cfg)
+	client.Max = 1
+
+	versions, err := client.Run(releaseName)
+	if errors.Is(err, driver.ErrReleaseNotFound) || isReleaseUninstalled(versions) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("get release history: %w", err)
+	}
+
+	return true, nil
+}
+
+func isReleaseUninstalled(versions []*release.Release) bool {
+	return len(versions) > 0 && versions[len(versions)-1].Info.Status == release.StatusUninstalled
+}
+
 func (h *Helm) Install(ctx context.Context, opts InstallOptions) (*release.Release, error) {
 	cfg, err := h.getActionCfg(opts.Namespace)
 	if err != nil {
@@ -306,6 +333,7 @@ func (h *Helm) Install(ctx context.Context, opts InstallOptions) (*release.Relea
 	client.CreateNamespace = true
 	client.WaitForJobs = true
 	client.Wait = true
+	client.Atomic = true
 
 	if opts.Timeout != 0 {
 		client.Timeout = opts.Timeout
@@ -341,7 +369,7 @@ func (h *Helm) Install(ctx context.Context, opts InstallOptions) (*release.Relea
 
 	release, err := client.RunWithContext(ctx, chartRequested, cleanVals)
 	if err != nil {
-		return nil, fmt.Errorf("run install: %w", err)
+		return nil, fmt.Errorf("helm install: %w", err)
 	}
 
 	return release, nil
@@ -357,6 +385,7 @@ func (h *Helm) Upgrade(ctx context.Context, opts UpgradeOptions) (*release.Relea
 	client.Namespace = opts.Namespace
 	client.WaitForJobs = true
 	client.Wait = true
+	client.Atomic = true
 	client.Force = opts.Force
 
 	if opts.Timeout != 0 {
@@ -393,7 +422,7 @@ func (h *Helm) Upgrade(ctx context.Context, opts UpgradeOptions) (*release.Relea
 
 	release, err := client.RunWithContext(ctx, opts.ReleaseName, chartRequested, cleanVals)
 	if err != nil {
-		return nil, fmt.Errorf("run upgrade: %w", err)
+		return nil, fmt.Errorf("helm upgrade: %w", err)
 	}
 
 	return release, nil
@@ -524,6 +553,8 @@ func cleanUpMapValue(v interface{}) interface{} {
 	case []interface{}:
 		return cleanUpInterfaceArray(v)
 	case map[string]interface{}:
+		return cleanUpGenericMap(v)
+	case map[interface{}]interface{}:
 		return cleanUpInterfaceMap(v)
 	case string:
 		return v
@@ -548,7 +579,7 @@ func cleanUpInterfaceArray(in []interface{}) []interface{} {
 }
 
 // Cleans up the map keys to be strings
-func cleanUpInterfaceMap(in map[string]interface{}) map[string]interface{} {
+func cleanUpInterfaceMap(in map[interface{}]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 	for k, v := range in {
 		result[fmt.Sprintf("%v", k)] = cleanUpMapValue(v)

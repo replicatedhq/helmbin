@@ -37,6 +37,14 @@ func init() {
 	helmValues = hv
 }
 
-func (a *OpenEBS) Name() string {
+func (o *OpenEBS) Name() string {
 	return "Storage"
+}
+
+func (o *OpenEBS) ReleaseName() string {
+	return releaseName
+}
+
+func (o *OpenEBS) Namespace() string {
+	return namespace
 }

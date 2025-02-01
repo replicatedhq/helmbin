@@ -53,7 +53,7 @@ func UpgradeCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("apply installation: %w", err)
 			}
-			previousInstallation, err := kubeutils.GetPreviousCRDInstallation(cmd.Context(), cli, installation)
+			previousInstallation, err := kubeutils.GetPreviousInstallation(cmd.Context(), cli, installation)
 			if err != nil {
 				return fmt.Errorf("get previous installation: %w", err)
 			}

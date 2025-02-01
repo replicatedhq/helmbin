@@ -28,7 +28,7 @@ func RestoreCmd(ctx context.Context, name string) *cobra.Command {
 	var s3Store s3BackupStore
 
 	cmd := &cobra.Command{
-		Use:   "restore",
+		Use:   "restore-legacy",
 		Short: fmt.Sprintf("Restore a %s cluster", name),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := preRunInstall2(cmd, &flags); err != nil {
@@ -291,11 +291,6 @@ func runRestore(cmd *cobra.Command, args []string, name string, flags Install2Cm
 		logrus.Debugf("restoring admin console from backup %q", backupToRestore.GetName())
 		if err := restoreFromReplicatedBackup(ctx, *backupToRestore, disasterRecoveryComponentAdminConsole, false); err != nil {
 			return err
-		}
-
-		logrus.Debugf("installing manager")
-		if err := installAndEnableManager(ctx); err != nil {
-			return fmt.Errorf("unable to install manager: %w", err)
 		}
 
 		fallthrough

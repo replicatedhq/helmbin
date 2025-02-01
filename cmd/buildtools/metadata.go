@@ -43,10 +43,6 @@ var metadataExtractHelmChartImagesCommand = &cli.Command{
 
 		repos := metadata.Configs.Repositories
 		charts := metadata.Configs.Charts
-		for _, chart := range metadata.BuiltinConfigs {
-			repos = append(repos, chart.Repositories...)
-			charts = append(charts, chart.Charts...)
-		}
 
 		images, err := extractImagesFromHelmExtensions(repos, charts, metadata.Versions["Kubernetes"])
 		if err != nil {

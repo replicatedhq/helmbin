@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	ecv1beta1 "github.com/replicatedhq/embedded-cluster/kinds/apis/v1beta1"
 	"github.com/replicatedhq/embedded-cluster/pkg/constants"
 	"github.com/replicatedhq/embedded-cluster/pkg/kubeutils"
 	"github.com/replicatedhq/embedded-cluster/pkg/spinner"
@@ -63,8 +64,9 @@ func EnableHA(ctx context.Context, kcli client.Client) error {
 		}
 
 		loading.Debugf("updating installation")
-		in.Spec.HighAvailability = true
-		if err := kubeutils.UpdateInstallation(ctx, kcli, in); err != nil {
+		if err := kubeutils.UpdateInstallation(ctx, kcli, in, func(in *ecv1beta1.Installation) {
+			in.Spec.HighAvailability = true
+		}); err != nil {
 			return fmt.Errorf("unable to update installation: %w", err)
 		}
 	}

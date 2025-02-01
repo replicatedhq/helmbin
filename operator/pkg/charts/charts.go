@@ -49,6 +49,7 @@ func K0sHelmExtensionsFromInstallation(
 		combinedConfigs = patchExtensionsForAirGap(in, combinedConfigs)
 	}
 
+	// TODO (@salah): port this
 	combinedConfigs, err = applyUserProvidedAddonOverrides(in, combinedConfigs)
 	if err != nil {
 		return nil, fmt.Errorf("apply user provided overrides: %w", err)
@@ -83,6 +84,7 @@ func generateHelmConfigs(ctx context.Context, in *clusterv1beta1.Installation, c
 		combinedConfigs.Repositories = append(combinedConfigs.Repositories, in.Spec.Config.Extensions.Helm.Repositories...)
 	}
 
+	// TODO (@salah): port this?
 	//set the cluster ID for the operator chart to use
 	clusterUUID, err := uuid.Parse(in.Spec.ClusterID)
 	if err != nil {
@@ -148,6 +150,7 @@ func generateHelmConfigs(ctx context.Context, in *clusterv1beta1.Installation, c
 	return combinedConfigs, nil
 }
 
+// TODO (@salah): apply this in v2 install, restore, and upgrade
 // applyUserProvidedAddonOverrides applies user-provided overrides to the HelmExtensions spec.
 func applyUserProvidedAddonOverrides(in *clusterv1beta1.Installation, combinedConfigs *v1beta1.Helm) (*v1beta1.Helm, error) {
 	if in == nil || in.Spec.Config == nil {

@@ -24,3 +24,14 @@ func UniqueStringSlice(input []string) []string {
 	}
 	return unique
 }
+
+func CleanErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	if len(msg) > 1024 {
+		msg = msg[:1024]
+	}
+	return msg
+}

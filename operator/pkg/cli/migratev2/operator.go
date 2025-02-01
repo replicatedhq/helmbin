@@ -3,6 +3,7 @@ package migratev2
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -20,22 +21,22 @@ const (
 
 // scaleDownOperator scales down the operator deployment to 0 replicas to prevent the operator from
 // reconciling the installation.
-func scaleDownOperator(ctx context.Context, logf LogFunc, cli client.Client) error {
-	logf("Scaling down operator")
+func scaleDownOperator(ctx context.Context, cli client.Client) error {
+	slog.Info("Scaling down operator")
 
 	err := setOperatorDeploymentReplicasZero(ctx, cli)
 	if err != nil {
 		return fmt.Errorf("set operator deployment replicas to 0: %w", err)
 	}
 
-	logf("Waiting for operator to scale down")
+	slog.Info("Waiting for operator to scale down")
 
 	err = waitForOperatorDeployment(ctx, cli)
 	if err != nil {
 		return fmt.Errorf("wait for operator deployment: %w", err)
 	}
 
-	logf("Successfully scaled down operator")
+	slog.Info("Successfully scaled down operator")
 	return nil
 }
 

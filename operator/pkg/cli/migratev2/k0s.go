@@ -3,6 +3,7 @@ package migratev2
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	k0shelmv1beta1 "github.com/k0sproject/k0s/pkg/apis/helm/v1beta1"
@@ -36,22 +37,22 @@ func needsK0sChartCleanup(ctx context.Context, cli client.Client) (bool, error) 
 }
 
 // cleanupK0sCharts removes control of the Helm Charts from the k0s controller.
-func cleanupK0sCharts(ctx context.Context, logf LogFunc, cli client.Client) error {
-	logf("Force deleting Chart custom resources")
+func cleanupK0sCharts(ctx context.Context, cli client.Client) error {
+	slog.Info("Force deleting Chart custom resources")
 	// forceDeleteChartCRs is necessary because the k0s controller will otherwise uninstall the
 	// Helm releases and we don't want that.
 	err := forceDeleteChartCRs(ctx, cli)
 	if err != nil {
 		return fmt.Errorf("delete chart custom resources: %w", err)
 	}
-	logf("Successfully force deleted Chart custom resources")
+	slog.Info("Successfully force deleted Chart custom resources")
 
-	logf("Removing Helm Charts from ClusterConfig")
+	slog.Info("Removing Helm Charts from ClusterConfig")
 	err = removeClusterConfigHelmExtensions(ctx, cli)
 	if err != nil {
 		return fmt.Errorf("cleanup cluster config: %w", err)
 	}
-	logf("Successfully removed Helm Charts from ClusterConfig")
+	slog.Info("Successfully removed Helm Charts from ClusterConfig")
 
 	return nil
 }

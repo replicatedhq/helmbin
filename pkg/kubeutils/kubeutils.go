@@ -2,7 +2,6 @@ package kubeutils
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -22,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -229,36 +229,56 @@ func (k *KubeUtils) WaitForInstallation(ctx context.Context, cli client.Client, 
 
 func CreateInstallation(ctx context.Context, cli client.Client, in *ecv1beta1.Installation) error {
 	in.Spec.SourceType = ecv1beta1.InstallationSourceTypeCRD
-	if err := cli.Create(ctx, in); err != nil {
-		return fmt.Errorf("create installation: %w", err)
+
+	if in.ObjectMeta.Labels == nil {
+		in.ObjectMeta.Labels = map[string]string{}
 	}
-	return nil
+	in.ObjectMeta.Labels["replicated.com/disaster-recovery"] = "ec-install"
+
+	return cli.Create(ctx, in)
 }
 
-func UpdateInstallation(ctx context.Context, cli client.Client, in *ecv1beta1.Installation) error {
-	// if the installation source type is CRD (or not set), just update directly
-	if in.Spec.SourceType == "" || in.Spec.SourceType == ecv1beta1.InstallationSourceTypeCRD {
-		if err := cli.Update(ctx, in); err != nil {
-			return fmt.Errorf("update crd installation: %w", err)
+func UpdateInstallation(ctx context.Context, cli client.Client, in *ecv1beta1.Installation, mutate func(in *ecv1beta1.Installation)) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := cli.Get(ctx, client.ObjectKey{Namespace: in.Namespace, Name: in.Name}, in)
+		if err != nil {
+			return fmt.Errorf("get installation before updating: %w", err)
+		}
+
+		mutate(in)
+
+		err = cli.Update(ctx, in)
+		if err != nil {
+			return fmt.Errorf("update installation: %w", err)
 		}
 		return nil
-	}
-	return fmt.Errorf("update installation: source type %q not supported", in.Spec.SourceType)
+	})
 }
 
-func UpdateInstallationStatus(ctx context.Context, cli client.Client, in *ecv1beta1.Installation) error {
-	// if the installation source type is CRD (or not set), just update directly
-	if in.Spec.SourceType == "" || in.Spec.SourceType == ecv1beta1.InstallationSourceTypeCRD {
-		if err := cli.Status().Update(ctx, in); err != nil {
-			return fmt.Errorf("update crd installation status: %w", err)
+func UpdateInstallationStatus(ctx context.Context, cli client.Client, in *ecv1beta1.Installation, mutate func(status *ecv1beta1.InstallationStatus)) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := cli.Get(ctx, client.ObjectKey{Namespace: in.Namespace, Name: in.Name}, in)
+		if err != nil {
+			return fmt.Errorf("get installation before updating status: %w", err)
+		}
+
+		mutate(&in.Status)
+
+		err = cli.Status().Update(ctx, in)
+		if err != nil {
+			return fmt.Errorf("update installation status: %w", err)
 		}
 		return nil
-	}
-
-	return fmt.Errorf("update installation status: source type %q not supported", in.Spec.SourceType)
+	})
 }
 
-func ListCRDInstallations(ctx context.Context, cli client.Client) ([]ecv1beta1.Installation, error) {
+func SetInstallationState(ctx context.Context, cli client.Client, in *ecv1beta1.Installation, state string, reason string, pendingCharts ...string) error {
+	return UpdateInstallationStatus(ctx, cli, in, func(status *ecv1beta1.InstallationStatus) {
+		status.SetState(state, reason, pendingCharts)
+	})
+}
+
+func ListInstallations(ctx context.Context, cli client.Client) ([]ecv1beta1.Installation, error) {
 	var list ecv1beta1.InstallationList
 	err := cli.List(ctx, &list)
 	if meta.IsNoMatchError(err) {
@@ -278,7 +298,10 @@ func ListCRDInstallations(ctx context.Context, cli client.Client) ([]ecv1beta1.I
 			return nil, fmt.Errorf("override installation data dirs: %w", err)
 		}
 		if didUpdate {
-			err := UpdateInstallation(ctx, cli, &install)
+			runtimeConfig := install.Spec.RuntimeConfig
+			err := UpdateInstallation(ctx, cli, &install, func(in *ecv1beta1.Installation) {
+				in.Spec.RuntimeConfig = runtimeConfig
+			})
 			if err != nil {
 				return nil, fmt.Errorf("update installation with legacy data dirs: %w", err)
 			}
@@ -291,36 +314,8 @@ func ListCRDInstallations(ctx context.Context, cli client.Client) ([]ecv1beta1.I
 	return installs, nil
 }
 
-func ListInstallations(ctx context.Context, cli client.Client) ([]ecv1beta1.Installation, error) {
-	// fall back to CRD-based installations
-	installs, err := ListCRDInstallations(ctx, cli)
-	if err != nil {
-		return nil, err
-	}
-	return installs, nil
-}
-
 func GetInstallation(ctx context.Context, cli client.Client, name string) (*ecv1beta1.Installation, error) {
 	installations, err := ListInstallations(ctx, cli)
-	if err != nil {
-		return nil, err
-	}
-	if len(installations) == 0 {
-		return nil, ErrNoInstallations{}
-	}
-
-	for _, installation := range installations {
-		if installation.Name == name {
-			return &installation, nil
-		}
-	}
-
-	// if we get here, we didn't find the installation
-	return nil, ErrInstallationNotFound{}
-}
-
-func GetCRDInstallation(ctx context.Context, cli client.Client, name string) (*ecv1beta1.Installation, error) {
-	installations, err := ListCRDInstallations(ctx, cli)
 	if err != nil {
 		return nil, err
 	}
@@ -354,27 +349,6 @@ func GetLatestInstallation(ctx context.Context, cli client.Client) (*ecv1beta1.I
 // GetPreviousInstallation returns the latest installation object in the cluster OTHER than the one passed as an argument.
 func GetPreviousInstallation(ctx context.Context, cli client.Client, in *ecv1beta1.Installation) (*ecv1beta1.Installation, error) {
 	installations, err := ListInstallations(ctx, cli)
-	if err != nil {
-		return nil, err
-	}
-	if len(installations) == 0 {
-		return nil, ErrNoInstallations{}
-	}
-
-	// find the first installation with a different name than the one we're upgrading to
-	for _, installation := range installations {
-		if installation.Name != in.Name {
-			return &installation, nil
-		}
-	}
-
-	// if we get here, we didn't find a previous installation
-	return nil, ErrInstallationNotFound{}
-}
-
-// GetPreviousCRDInstallation returns the latest installation object in the cluster OTHER than the one passed as an argument.
-func GetPreviousCRDInstallation(ctx context.Context, cli client.Client, in *ecv1beta1.Installation) (*ecv1beta1.Installation, error) {
-	installations, err := ListCRDInstallations(ctx, cli)
 	if err != nil {
 		return nil, err
 	}
@@ -699,25 +673,6 @@ func NumOfControlPlaneNodes(ctx context.Context, cli client.Client) (int, error)
 		return 0, err
 	}
 	return len(nodes.Items), nil
-}
-
-func (k *KubeUtils) WaitAndMarkInstallation(ctx context.Context, cli client.Client, name string, state string) error {
-	for i := 0; i < 20; i++ {
-		in, err := GetInstallation(ctx, cli, name)
-		if err != nil {
-			if !errors.Is(err, ErrNoInstallations{}) {
-				return fmt.Errorf("unable to get installation: %w", err)
-			}
-		} else {
-			in.Status.State = state
-			if err := UpdateInstallationStatus(ctx, cli, in); err != nil {
-				return fmt.Errorf("unable to update installation status: %w", err)
-			}
-			return nil
-		}
-		time.Sleep(time.Second)
-	}
-	return fmt.Errorf("installation %s not found after 20 seconds", name)
 }
 
 // KubeClient returns a new kubernetes client.

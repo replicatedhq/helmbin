@@ -14,7 +14,6 @@ import (
 	"github.com/replicatedhq/embedded-cluster/pkg/helpers"
 	"github.com/replicatedhq/embedded-cluster/pkg/k0s"
 	"github.com/replicatedhq/embedded-cluster/pkg/kubeutils"
-	"github.com/replicatedhq/embedded-cluster/pkg/manager"
 	"github.com/replicatedhq/embedded-cluster/pkg/prompts"
 	"github.com/replicatedhq/embedded-cluster/pkg/runtimeconfig"
 	rcutil "github.com/replicatedhq/embedded-cluster/pkg/runtimeconfig/util"
@@ -181,10 +180,6 @@ func ResetCmd(ctx context.Context, name string) *cobra.Command {
 
 			if err := helpers.RemoveAll(runtimeconfig.EmbeddedClusterLogsSubDir()); err != nil {
 				return fmt.Errorf("failed to remove logs directory: %w", err)
-			}
-
-			if err := manager.Uninstall(ctx, logrus.Debugf); err != nil {
-				return fmt.Errorf("failed to uninstall manager service: %w", err)
 			}
 
 			if err := helpers.RemoveAll(runtimeconfig.EmbeddedClusterOpenEBSLocalSubDir()); err != nil {

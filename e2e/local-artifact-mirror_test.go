@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -18,12 +19,12 @@ func TestLocalArtifactMirror(t *testing.T) {
 		Nodes:        1,
 		Distro:       "debian-bookworm",
 		LicensePath:  "license.yaml",
-		ECBinaryPath: "../output/bin/embedded-cluster-original",
+		ECBinaryPath: "../output/bin/embedded-cluster",
 	})
 	defer tc.Cleanup()
 
 	t.Logf("%s: installing embedded-cluster on node 0", time.Now().Format(time.RFC3339))
-	line := []string{"default-install.sh", "--local-artifact-mirror-port", "50001"}
+	line := []string{"single-node-install.sh", "ui", os.Getenv("SHORT_SHA"), "--local-artifact-mirror-port", "50001"}
 	if stdout, stderr, err := tc.RunCommandOnNode(0, line); err != nil {
 		t.Fatalf("fail to install embedded-cluster on node 0: %v: %s: %s", err, stdout, stderr)
 	}

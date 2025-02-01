@@ -2,6 +2,9 @@ package extensions
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"sort"
 
 	k0sv1beta1 "github.com/k0sproject/k0s/pkg/apis/k0s/v1beta1"
 	"github.com/pkg/errors"
@@ -70,6 +73,7 @@ func upgrade(ctx context.Context, hcli *helm.Helm, ext ecv1beta1.Chart) error {
 		Values:       values,
 		Namespace:    ext.TargetNS,
 		Timeout:      ext.Timeout.Duration,
+		Force:        true, // this was the default in k0s
 	})
 	if err != nil {
 		return errors.Wrap(err, "helm upgrade")
@@ -89,4 +93,69 @@ func uninstall(ctx context.Context, hcli *helm.Helm, ext ecv1beta1.Chart) error 
 	}
 
 	return nil
+}
+
+type DiffResult struct {
+	Added    []ecv1beta1.Chart
+	Removed  []ecv1beta1.Chart
+	Modified []ecv1beta1.Chart
+}
+
+func diffExtensions(oldExts, newExts ecv1beta1.Extensions) DiffResult {
+	oldCharts := make(map[string]ecv1beta1.Chart)
+	newCharts := make(map[string]ecv1beta1.Chart)
+
+	if oldExts.Helm != nil {
+		for _, chart := range oldExts.Helm.Charts {
+			oldCharts[chart.Name] = chart
+		}
+	}
+	if newExts.Helm != nil {
+		for _, chart := range newExts.Helm.Charts {
+			newCharts[chart.Name] = chart
+		}
+	}
+
+	var added, removed, modified []ecv1beta1.Chart
+
+	// find removed and modified charts.
+	for name, oldChart := range oldCharts {
+		newChart, exists := newCharts[name]
+		if !exists {
+			// chart was removed.
+			removed = append(removed, oldChart)
+		} else if !reflect.DeepEqual(oldChart, newChart) {
+			// chart was modified.
+			modified = append(modified, newChart)
+		}
+	}
+
+	// find added charts.
+	for name, newChart := range newCharts {
+		if _, exists := oldCharts[name]; !exists {
+			// chart was added.
+			added = append(added, newChart)
+		}
+	}
+
+	// sort by order
+	sort.Slice(added, func(i, j int) bool {
+		return added[i].Order < added[j].Order
+	})
+	sort.Slice(removed, func(i, j int) bool {
+		return removed[i].Order > removed[j].Order
+	})
+	sort.Slice(modified, func(i, j int) bool {
+		return modified[i].Order < modified[j].Order
+	})
+
+	return DiffResult{
+		Added:    added,
+		Removed:  removed,
+		Modified: modified,
+	}
+}
+
+func conditionName(ext ecv1beta1.Chart) string {
+	return fmt.Sprintf("%s-%s", ext.TargetNS, ext.Name)
 }

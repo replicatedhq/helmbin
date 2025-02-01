@@ -13,10 +13,11 @@ func NodeCmd(ctx context.Context, name string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return nil
 		},
+		Hidden: true,
 	}
 
 	// here for legacy reasons
-	joinCmd := JoinCmd(ctx, name)
+	joinCmd := Join2Cmd(ctx, name)
 	joinCmd.Hidden = true
 	cmd.AddCommand(joinCmd)
 

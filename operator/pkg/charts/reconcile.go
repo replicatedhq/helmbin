@@ -103,6 +103,7 @@ func ReconcileHelmCharts(ctx context.Context, cli client.Client, in *v1beta1.Ins
 			chartErrorString += fmt.Sprintf("%s: %s\n", chartName, chartErrors[chartName])
 		}
 
+		// TODO (@salah): how to update installation state in v2?
 		chartErrorString = "failed to update helm charts: \n" + chartErrorString
 		log.Info("Chart errors", "errors", chartErrorString)
 		if len(chartErrorString) > 1024 {

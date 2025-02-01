@@ -13,6 +13,7 @@ var DefaultNoProxy = []string{"localhost", "127.0.0.1", ".cluster.local", ".svc"
 
 const ProxyRegistryAddress = "proxy.replicated.com"
 const KotsadmNamespace = "kotsadm"
+const KotsadmServiceAccount = "kotsadm"
 const SeaweedFSNamespace = "seaweedfs"
 const RegistryNamespace = "registry"
 const VeleroNamespace = "velero"

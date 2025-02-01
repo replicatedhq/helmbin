@@ -17,7 +17,7 @@ PREVIOUS_K0S_GO_VERSION ?= v1.29.9+k0s.0
 K0S_BINARY_SOURCE_OVERRIDE =
 TROUBLESHOOT_VERSION = v0.112.1
 
-KOTS_VERSION = v$(shell awk '/^version/{print $$2}' pkg/addons/adminconsole/static/metadata.yaml | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+KOTS_VERSION = v$(shell awk '/^version/{print $$2}' pkg/addons2/adminconsole/static/metadata.yaml | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
 # When updating KOTS_BINARY_URL_OVERRIDE, also update the KOTS_VERSION above or
 # scripts/ci-upload-binaries.sh may find the version in the cache and not upload the overridden binary.
 KOTS_BINARY_URL_OVERRIDE =
@@ -28,7 +28,6 @@ LOCAL_ARTIFACT_MIRROR_IMAGE ?= proxy.replicated.com/anonymous/replicated/embedde
 # These are used to override the binary urls in dev and e2e tests
 METADATA_K0S_BINARY_URL_OVERRIDE =
 METADATA_KOTS_BINARY_URL_OVERRIDE =
-METADATA_MANAGER_BINARY_URL_OVERRIDE =
 METADATA_OPERATOR_BINARY_URL_OVERRIDE =
 
 ifeq ($(K0S_VERSION),v1.30.5+k0s.0-ec.1)
@@ -50,15 +49,14 @@ LD_FLAGS = \
 	-X github.com/replicatedhq/embedded-cluster/pkg/versions.LocalArtifactMirrorImage=$(LOCAL_ARTIFACT_MIRROR_IMAGE) \
 	-X github.com/replicatedhq/embedded-cluster/pkg/versions.K0sBinaryURLOverride=$(METADATA_K0S_BINARY_URL_OVERRIDE) \
 	-X github.com/replicatedhq/embedded-cluster/pkg/versions.KOTSBinaryURLOverride=$(METADATA_KOTS_BINARY_URL_OVERRIDE) \
-	-X github.com/replicatedhq/embedded-cluster/pkg/versions.ManagerBinaryURLOverride=$(METADATA_MANAGER_BINARY_URL_OVERRIDE) \
 	-X github.com/replicatedhq/embedded-cluster/pkg/versions.OperatorBinaryURLOverride=$(METADATA_OPERATOR_BINARY_URL_OVERRIDE) \
-	-X github.com/replicatedhq/embedded-cluster/pkg/addons/adminconsole.ChartRepoOverride=$(ADMIN_CONSOLE_CHART_REPO_OVERRIDE) \
-	-X github.com/replicatedhq/embedded-cluster/pkg/addons/adminconsole.KurlProxyImageOverride=$(ADMIN_CONSOLE_KURL_PROXY_IMAGE_OVERRIDE) \
-	-X github.com/replicatedhq/embedded-cluster/pkg/addons/adminconsole.KotsVersion=$(KOTS_VERSION) \
-	-X github.com/replicatedhq/embedded-cluster/pkg/addons/adminconsole.AdminConsoleChartRepoOverride=$(ADMIN_CONSOLE_CHART_REPO_OVERRIDE) \
-	-X github.com/replicatedhq/embedded-cluster/pkg/addons/adminconsole.AdminConsoleImageOverride=$(ADMIN_CONSOLE_IMAGE_OVERRIDE) \
-	-X github.com/replicatedhq/embedded-cluster/pkg/addons/adminconsole.AdminConsoleMigrationsImageOverride=$(ADMIN_CONSOLE_MIGRATIONS_IMAGE_OVERRIDE) \
-	-X github.com/replicatedhq/embedded-cluster/pkg/addons/adminconsole.AdminConsoleKurlProxyImageOverride=$(ADMIN_CONSOLE_KURL_PROXY_IMAGE_OVERRIDE)
+	-X github.com/replicatedhq/embedded-cluster/pkg/addons2/adminconsole.ChartRepoOverride=$(ADMIN_CONSOLE_CHART_REPO_OVERRIDE) \
+	-X github.com/replicatedhq/embedded-cluster/pkg/addons2/adminconsole.KurlProxyImageOverride=$(ADMIN_CONSOLE_KURL_PROXY_IMAGE_OVERRIDE) \
+	-X github.com/replicatedhq/embedded-cluster/pkg/addons2/adminconsole.KotsVersion=$(KOTS_VERSION) \
+	-X github.com/replicatedhq/embedded-cluster/pkg/addons2/adminconsole.AdminConsoleChartRepoOverride=$(ADMIN_CONSOLE_CHART_REPO_OVERRIDE) \
+	-X github.com/replicatedhq/embedded-cluster/pkg/addons2/adminconsole.AdminConsoleImageOverride=$(ADMIN_CONSOLE_IMAGE_OVERRIDE) \
+	-X github.com/replicatedhq/embedded-cluster/pkg/addons2/adminconsole.AdminConsoleMigrationsImageOverride=$(ADMIN_CONSOLE_MIGRATIONS_IMAGE_OVERRIDE) \
+	-X github.com/replicatedhq/embedded-cluster/pkg/addons2/adminconsole.AdminConsoleKurlProxyImageOverride=$(ADMIN_CONSOLE_KURL_PROXY_IMAGE_OVERRIDE)
 DISABLE_FIO_BUILD ?= 0
 
 export PATH := $(shell pwd)/bin:$(PATH)
@@ -142,13 +140,6 @@ ifneq ($(DISABLE_FIO_BUILD),1)
 	cp output/bins/fio-$(FIO_VERSION)-$(ARCH) $@
 endif
 
-.PHONY: cmd/installer/goods/bins/manager
-cmd/installer/goods/bins/manager:
-	mkdir -p cmd/installer/goods/bins
-	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -ldflags="-s -w $(LD_FLAGS) -extldflags=-static" -o output/bins/manager ./cmd/manager
-	cp output/bins/manager $@
-	touch $@
-
 .PHONY: cmd/installer/goods/internal/bins/kubectl-kots
 cmd/installer/goods/internal/bins/kubectl-kots:
 	mkdir -p cmd/installer/goods/internal/bins
@@ -223,7 +214,6 @@ static: cmd/installer/goods/bins/k0s \
 	cmd/installer/goods/bins/kubectl-support_bundle \
 	cmd/installer/goods/bins/local-artifact-mirror \
 	cmd/installer/goods/bins/fio \
-	cmd/installer/goods/bins/manager \
 	cmd/installer/goods/internal/bins/kubectl-kots
 
 .PHONY: static-dryrun
@@ -234,7 +224,6 @@ static-dryrun:
 		cmd/installer/goods/bins/kubectl-support_bundle \
 		cmd/installer/goods/bins/local-artifact-mirror \
 		cmd/installer/goods/bins/fio \
-		cmd/installer/goods/bins/manager \
 		cmd/installer/goods/internal/bins/kubectl-kots
 
 .PHONY: embedded-cluster-linux-amd64
@@ -380,10 +369,6 @@ test-lam-e2e: cmd/installer/goods/bins/local-artifact-mirror
 bin/installer:
 	@mkdir -p bin
 	go build -o bin/installer ./cmd/installer
-
-.PHONY: bin/manager
-bin/manager:
-	go build -o bin/manager ./cmd/manager
 
 # make test-embed channel=<channelid> app=<appslug>
 .PHONY: test-embed
