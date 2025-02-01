@@ -61,6 +61,7 @@ type ClusterInput struct {
 	EmbeddedClusterReleaseBuilderPath string // used to replace the release in the binary
 	AirgapInstallBundlePath           string
 	AirgapUpgradeBundlePath           string
+	AirgapUpgrade2BundlePath          string
 	Image                             string
 	network                           string
 	T                                 *testing.T
@@ -462,6 +463,11 @@ func CopyFilesToNode(in *ClusterInput, node string) {
 		{
 			SourcePath: in.AirgapUpgradeBundlePath,
 			DestPath:   "/assets/ec-release-upgrade.tgz",
+			Mode:       0755,
+		},
+		{
+			SourcePath: in.AirgapUpgrade2BundlePath,
+			DestPath:   "/assets/ec-release-upgrade2.tgz",
 			Mode:       0755,
 		},
 	}

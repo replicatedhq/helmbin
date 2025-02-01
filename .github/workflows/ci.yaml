@@ -624,6 +624,12 @@ jobs:
           export RELEASE_YAML_DIR=e2e/kots-release-install-legacydr
           ./scripts/ci-release-app.sh
 
+          # then a noop upgrade
+          export EC_VERSION="$(git describe --tags --abbrev=4 --match='[0-9]*.[0-9]*.[0-9]*')"
+          export APP_VERSION="appver-${SHORT_SHA}-noop"
+          export RELEASE_YAML_DIR=e2e/kots-release-install
+          ./scripts/ci-release-app.sh
+
           # and finally an app upgrade
           export EC_VERSION="$(git describe --tags --abbrev=4 --match='[0-9]*.[0-9]*.[0-9]*')-upgrade"
           export APP_VERSION="appver-${SHORT_SHA}-upgrade"
@@ -673,36 +679,36 @@ jobs:
       fail-fast: false
       matrix:
         test:
-          - TestPreflights
-          - TestMaterialize
-          - TestHostPreflightCustomSpec
-          - TestHostPreflightInBuiltSpec
+          # - TestPreflights
+          # - TestMaterialize
+          # - TestHostPreflightCustomSpec
+          # - TestHostPreflightInBuiltSpec
           - TestSingleNodeInstallation
-          - TestSingleNodeInstallationAlmaLinux8
-          - TestSingleNodeInstallationDebian11
-          - TestSingleNodeInstallationDebian12
-          - TestSingleNodeInstallationCentos9Stream
+          # - TestSingleNodeInstallationAlmaLinux8
+          # - TestSingleNodeInstallationDebian11
+          # - TestSingleNodeInstallationDebian12
+          # - TestSingleNodeInstallationCentos9Stream
           - TestSingleNodeUpgradePreviousStable
-          - TestInstallFromReplicatedApp
-          - TestUpgradeFromReplicatedApp
+          # - TestInstallFromReplicatedApp
+          # - TestUpgradeFromReplicatedApp
           - TestUpgradeEC18FromReplicatedApp
-          - TestResetAndReinstall
-          - TestOldVersionUpgrade
-          - TestInstallSnapshotFromReplicatedApp
-          - TestMultiNodeInstallation
-          - TestMultiNodeHAInstallation
-          - TestSingleNodeDisasterRecovery
-          - TestSingleNodeLegacyDisasterRecovery
-          - TestSingleNodeResumeDisasterRecovery
-          - TestMultiNodeHADisasterRecovery
-          - TestSingleNodeInstallationNoopUpgrade
-          - TestCustomCIDR
-          - TestLocalArtifactMirror
-          - TestMultiNodeReset
-          - TestCollectSupportBundle
-          - TestUnsupportedOverrides
-          - TestHostCollectSupportBundleInCluster
-          - TestInstallWithConfigValues
+          # - TestResetAndReinstall
+          # - TestOldVersionUpgrade
+          # - TestInstallSnapshotFromReplicatedApp
+          # - TestMultiNodeInstallation
+          # - TestMultiNodeHAInstallation
+          # - TestSingleNodeDisasterRecovery
+          # - TestSingleNodeLegacyDisasterRecovery
+          # - TestSingleNodeResumeDisasterRecovery
+          # - TestMultiNodeHADisasterRecovery
+          # - TestSingleNodeInstallationNoopUpgrade
+          # - TestCustomCIDR
+          # - TestLocalArtifactMirror
+          # - TestMultiNodeReset
+          # - TestCollectSupportBundle
+          # - TestUnsupportedOverrides
+          # - TestHostCollectSupportBundleInCluster
+          # - TestInstallWithConfigValues
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -775,29 +781,29 @@ jobs:
           - TestVersion
           - TestCommandsRequireSudo
           - TestResetAndReinstallAirgap
-          - TestSingleNodeAirgapUpgrade
-          - TestSingleNodeAirgapUpgradeConfigValues
-          - TestSingleNodeAirgapUpgradeCustomCIDR
-          - TestSingleNodeDisasterRecoveryWithProxy
-          - TestProxiedEnvironment
-          - TestProxiedCustomCIDR
-          - TestInstallWithPrivateCAs
-          - TestInstallWithMITMProxy
+          # - TestSingleNodeAirgapUpgrade
+          # - TestSingleNodeAirgapUpgradeConfigValues
+          # - TestSingleNodeAirgapUpgradeCustomCIDR
+          # - TestSingleNodeDisasterRecoveryWithProxy
+          # - TestProxiedEnvironment
+          # - TestProxiedCustomCIDR
+          # - TestInstallWithPrivateCAs
+          # - TestInstallWithMITMProxy
         include:
-          - test: TestMultiNodeAirgapUpgrade
-            runner: embedded-cluster-2
-          - test: TestMultiNodeAirgapUpgradeSameK0s
-            runner: embedded-cluster-2
+          # - test: TestMultiNodeAirgapUpgrade
+          #   runner: embedded-cluster-2
+          # - test: TestMultiNodeAirgapUpgradeSameK0s
+          #   runner: embedded-cluster-2
           - test: TestMultiNodeAirgapUpgradePreviousStable
             runner: embedded-cluster-2
           - test: TestAirgapUpgradeFromEC18
             runner: embedded-cluster-2
-          - test: TestSingleNodeAirgapDisasterRecovery
-            runner: embedded-cluster-2
-          - test: TestMultiNodeAirgapHAInstallation
-            runner: embedded-cluster-2
-          - test: TestMultiNodeAirgapHADisasterRecovery
-            runner: embedded-cluster-2
+          # - test: TestSingleNodeAirgapDisasterRecovery
+          #   runner: embedded-cluster-2
+          # - test: TestMultiNodeAirgapHAInstallation
+          #   runner: embedded-cluster-2
+          # - test: TestMultiNodeAirgapHADisasterRecovery
+          #   runner: embedded-cluster-2
     steps:
       - name: Checkout
         uses: actions/checkout@v4

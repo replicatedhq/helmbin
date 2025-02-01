@@ -366,7 +366,7 @@ has_stored_host_preflight_results() {
 }
 
 install_kots_cli() {
-    if command -v kots; then
+    if command -v kubectl-kots; then
         return
     fi
 

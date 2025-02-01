@@ -5,7 +5,7 @@ metadata:
   labels:
     troubleshoot.io/kind: support-bundle
 spec:
-  uri: https://raw.githubusercontent.com/replicatedhq/embedded-cluster/main/operator/charts/embedded-cluster-operator/troubleshoot/cluster-support-bundle.yaml
+  uri: https://raw.githubusercontent.com/replicatedhq/embedded-cluster/emosbaugh/20250131/e2e-double-upgrade/operator/charts/embedded-cluster-operator/troubleshoot/cluster-support-bundle.yaml
   collectors:
   - clusterInfo: {}
   - clusterResources:
