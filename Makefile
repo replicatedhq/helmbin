@@ -10,12 +10,12 @@ ADMIN_CONSOLE_CHART_REPO_OVERRIDE =
 ADMIN_CONSOLE_IMAGE_OVERRIDE =
 ADMIN_CONSOLE_MIGRATIONS_IMAGE_OVERRIDE =
 ADMIN_CONSOLE_KURL_PROXY_IMAGE_OVERRIDE =
-K0S_VERSION = v1.30.9+k0s.0
+K0S_VERSION = v1.32.1+k0s.0
 K0S_GO_VERSION = v1.30.9+k0s.0
 PREVIOUS_K0S_VERSION ?= v1.29.9+k0s.0-ec.0
 PREVIOUS_K0S_GO_VERSION ?= v1.29.9+k0s.0
 K0S_BINARY_SOURCE_OVERRIDE =
-TROUBLESHOOT_VERSION = v0.112.1
+TROUBLESHOOT_VERSION = v0.115.2
 
 KOTS_VERSION = v$(shell awk '/^version/{print $$2}' pkg/addons/adminconsole/static/metadata.yaml | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
 # When updating KOTS_BINARY_URL_OVERRIDE, also update the KOTS_VERSION above or
@@ -32,11 +32,11 @@ METADATA_MANAGER_BINARY_URL_OVERRIDE =
 METADATA_OPERATOR_BINARY_URL_OVERRIDE =
 
 ifeq ($(K0S_VERSION),v1.30.5+k0s.0-ec.1)
-K0S_BINARY_SOURCE_OVERRIDE = https://tf-staging-embedded-cluster-bin.s3.amazonaws.com/custom-k0s-binaries/k0s-v1.30.5%2Bk0s.0-ec.1-$(ARCH)
+K0S_BINARY_SOURCE_OVERRIDE =
 else ifeq ($(K0S_VERSION),v1.29.9+k0s.0-ec.0)
-K0S_BINARY_SOURCE_OVERRIDE = https://tf-staging-embedded-cluster-bin.s3.amazonaws.com/custom-k0s-binaries/k0s-v1.29.9%2Bk0s.0-ec.0-$(ARCH)
+K0S_BINARY_SOURCE_OVERRIDE =
 else ifeq ($(K0S_VERSION),v1.28.14+k0s.0-ec.0)
-K0S_BINARY_SOURCE_OVERRIDE = https://tf-staging-embedded-cluster-bin.s3.amazonaws.com/custom-k0s-binaries/k0s-v1.28.14%2Bk0s.0-ec.0-$(ARCH)
+K0S_BINARY_SOURCE_OVERRIDE =
 endif
 
 ifneq ($(KOTS_BINARY_FILE_OVERRIDE),)
