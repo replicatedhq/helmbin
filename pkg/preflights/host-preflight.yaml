@@ -996,39 +996,51 @@ spec:
     - kernelModules:
         checkName: "Overlay kernel module"
         outcomes:
-          - fail:
-              when: "overlay != loaded,loadable"
-              message: The 'overlay' kernel module is not loaded or loadable
+          - pass:
+              when: "rosetta == loaded"
+              message: The kernel is likely linuxkit, skipping kernel module check
           - pass:
               when: "overlay == loaded,loadable"
               message: The 'overlay' kernel module is loaded or loadable
+          - fail:
+              when: ""
+              message: The 'overlay' kernel module is not loaded or loadable
     - kernelModules:
         checkName: "IP tables kernel module"
         outcomes:
-          - fail:
-              when: "ip_tables != loaded,loadable"
-              message: The 'ip_tables' kernel module is not loaded or loadable
+          - pass:
+              when: "rosetta == loaded"
+              message: The kernel is likely linuxkit, skipping kernel module check
           - pass:
               when: "ip_tables == loaded,loadable"
               message: The 'ip_tables' kernel module is loaded or loadable
+          - fail:
+              when: ""
+              message: The 'ip_tables' kernel module is not loaded or loadable
     - kernelModules:
         checkName: "BR Netfilter kernel module"
         outcomes:
-          - fail:
-              when: "br_netfilter != loaded,loadable"
-              message: The 'br_netfilter' kernel module is not loaded or loadable
+          - pass:
+              when: "rosetta == loaded"
+              message: The kernel is likely linuxkit, skipping kernel module check
           - pass:
               when: "br_netfilter == loaded,loadable"
               message: The 'br_netfilter' kernel module is loaded or loadable
+          - fail:
+              when: ""
+              message: The 'br_netfilter' kernel module is not loaded or loadable
     - kernelModules:
         checkName: "NF Conntrack kernel module"
         outcomes:
-          - fail:
-              when: "nf_conntrack != loaded,loadable"
-              message: The 'nf_conntrack' kernel module is not loaded or loadable
+          - pass:
+              when: "rosetta == loaded"
+              message: The kernel is likely linuxkit, skipping kernel module check
           - pass:
               when: "nf_conntrack == loaded,loadable"
               message: The 'nf_conntrack' kernel module is loaded or loadable
+          - fail:
+              when: ""
+              message: The 'nf_conntrack' kernel module is not loaded or loadable
     - networkNamespaceConnectivity:
         collectorName: check-network-namespace-connectivity
         outcomes:
