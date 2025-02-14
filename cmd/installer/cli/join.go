@@ -299,7 +299,8 @@ func installAndJoinCluster(ctx context.Context, jcmd *kotsadm.JoinCommandRespons
 
 	logrus.Debugf("creating systemd unit files")
 	// both controller and worker nodes will have 'worker' in the join command
-	if err := createSystemdUnitFiles(!strings.Contains(jcmd.K0sJoinCommand, "controller"), jcmd.InstallationSpec.Proxy); err != nil {
+	isWorker := !strings.Contains(jcmd.K0sJoinCommand, "controller")
+	if err := createSystemdUnitFiles(ctx, isWorker, jcmd.InstallationSpec.Proxy); err != nil {
 		return fmt.Errorf("unable to create systemd unit files: %w", err)
 	}
 
