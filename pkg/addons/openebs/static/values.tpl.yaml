@@ -9,7 +9,7 @@ engines:
       enabled: false
 localpv-provisioner:
   analytics:
-    enabled: false
+    enabled: true
 {{- if .ReplaceImages }}
   helperPod:
     image:
