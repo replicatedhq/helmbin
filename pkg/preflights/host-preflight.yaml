@@ -235,6 +235,8 @@ spec:
           - pass:
               when: 'ntp == synchronized+active'
               message: NTP is enabled and the system clock is synchronized
+          - fail:
+              message: 'Unable to determine system clock status'
     - jsonCompare:
         checkName: Cgroups
         fileName: host-collectors/system/cgroups.json
