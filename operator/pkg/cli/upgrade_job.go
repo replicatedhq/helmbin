@@ -63,7 +63,7 @@ func UpgradeJobCmd() *cobra.Command {
 
 			airgapChartsPath := ""
 			if in.Spec.AirGap {
-				airgapChartsPath = runtimeconfig.EmbeddedClusterChartsSubDir()
+				airgapChartsPath = runtimeconfig.EmbeddedClusterChartsSubDirNoCreate()
 			}
 
 			hcli, err := helm.NewClient(helm.HelmOptions{

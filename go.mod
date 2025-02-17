@@ -1,6 +1,6 @@
 module github.com/replicatedhq/embedded-cluster
 
-go 1.23.2
+go 1.23.4
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7

@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gosimple/slug"
@@ -170,6 +171,10 @@ func preRunInstall(cmd *cobra.Command, flags *InstallCmdFlags) error {
 	if os.Getuid() != 0 {
 		return fmt.Errorf("install command must be run as root")
 	}
+
+	// set the umask to 022 so that we can create files/directories with 755 permissions
+	// this does not return an error - it returns the previous umask
+	_ = syscall.Umask(0o022)
 
 	p, err := parseProxyFlags(cmd)
 	if err != nil {

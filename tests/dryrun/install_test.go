@@ -7,12 +7,14 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/replicatedhq/embedded-cluster/pkg/dryrun"
 	"github.com/replicatedhq/embedded-cluster/pkg/helm"
 	"github.com/replicatedhq/embedded-cluster/pkg/kubeutils"
+	"github.com/replicatedhq/embedded-cluster/pkg/runtimeconfig"
 	troubleshootv1beta2 "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -20,6 +22,11 @@ import (
 )
 
 func TestDefaultInstallation(t *testing.T) {
+	testDefaultInstallationImpl(t)
+	t.Logf("%s: test complete", time.Now().Format(time.RFC3339))
+}
+
+func testDefaultInstallationImpl(t *testing.T) {
 	hcli := &helm.MockClient{}
 
 	mock.InOrder(
@@ -152,8 +159,6 @@ func TestDefaultInstallation(t *testing.T) {
 	assert.Equal(t, "10.244.0.0/17", k0sConfig.Spec.Network.PodCIDR)
 	assert.Equal(t, "10.244.128.0/17", k0sConfig.Spec.Network.ServiceCIDR)
 	assert.Contains(t, k0sConfig.Spec.API.SANs, "kubernetes.default.svc.cluster.local")
-
-	t.Logf("%s: test complete", time.Now().Format(time.RFC3339))
 }
 
 func TestCustomDataDir(t *testing.T) {
@@ -388,6 +393,39 @@ func TestConfigValuesInstallation(t *testing.T) {
 		},
 		false,
 	)
+
+	t.Logf("%s: test complete", time.Now().Format(time.RFC3339))
+}
+
+func TestRestrictiveUmask(t *testing.T) {
+	oldUmask := syscall.Umask(0o077)
+	defer syscall.Umask(oldUmask)
+
+	testDefaultInstallationImpl(t)
+
+	// check that folders created in this test have the right permissions
+	folderList := []string{
+		runtimeconfig.EmbeddedClusterHomeDirectory(),
+		runtimeconfig.EmbeddedClusterBinsSubDir(),
+		runtimeconfig.EmbeddedClusterChartsSubDir(),
+		runtimeconfig.PathToEmbeddedClusterBinary("kubectl-preflight"),
+	}
+	gotFailure := false
+	for _, folder := range folderList {
+		stat, err := os.Stat(folder)
+		if err != nil {
+			t.Logf("failed to stat %s: %v", folder, err)
+			gotFailure = true
+			continue
+		}
+		if stat.Mode().Perm() != 0755 {
+			t.Logf("expected folder %s to have mode 0755, got %O", folder, stat.Mode().Perm())
+			gotFailure = true
+		}
+	}
+	if gotFailure {
+		t.Fatalf("at least one folder had incorrect permissions")
+	}
 
 	t.Logf("%s: test complete", time.Now().Format(time.RFC3339))
 }
