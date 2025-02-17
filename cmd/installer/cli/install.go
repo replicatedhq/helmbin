@@ -265,6 +265,11 @@ func runInstall(ctx context.Context, name string, flags InstallCmdFlags, metrics
 		return fmt.Errorf("unable to configure network manager: %w", err)
 	}
 
+	logrus.Debugf("configuring firewalld")
+	if err := configureFirewalld(ctx, flags.cidrCfg, flags.networkInterface); err != nil {
+		logrus.Debugf("unable to configure firewalld: %v", err)
+	}
+
 	logrus.Debugf("running install preflights")
 	if err := runInstallPreflights(ctx, flags, metricsReporter); err != nil {
 		if errors.Is(err, preflights.ErrPreflightsHaveFail) {
@@ -652,6 +657,36 @@ func configureNetworkManager(ctx context.Context) error {
 	logrus.Debugf("network manager config created, restarting the service")
 	if _, err := helpers.RunCommand("systemctl", "restart", "NetworkManager"); err != nil {
 		return fmt.Errorf("unable to restart network manager: %w", err)
+	}
+	return nil
+}
+
+// configureFirewalld creates a zo in the firewalld zones directory and reloads
+// firewalld configuration (firewall-cmd --reload). This function is a no-op if
+// firewalld isn't installed or is inactive.
+func configureFirewalld(ctx context.Context, cidrCfg *CIDRConfig, networkInterface string) error {
+	if active, err := helpers.IsSystemdServiceActive(ctx, "firewalld"); err != nil {
+		return fmt.Errorf("unable to check if firewalld is active: %w", err)
+	} else if !active {
+		logrus.Debugf("firewalld is not active, skipping configuration")
+		return nil
+	}
+
+	dir := "/etc/firewalld/zones/"
+	if _, err := os.Stat(dir); err != nil {
+		logrus.Debugf("skiping firewalld config (%s): %v", dir, err)
+		return nil
+	}
+
+	logrus.Debugf("creating firewalld config file")
+	materializer := goods.NewMaterializer()
+	if err := materializer.FirewalldConfig(cidrCfg.PodCIDR, cidrCfg.ServiceCIDR, networkInterface); err != nil {
+		return fmt.Errorf("unable to materialize firewalld configuration: %w", err)
+	}
+
+	logrus.Debugf("firewalld config created, reloading")
+	if _, err := helpers.RunCommand("firewall-cmd", "--reload"); err != nil {
+		return fmt.Errorf("unable to reload firewalld: %w", err)
 	}
 	return nil
 }

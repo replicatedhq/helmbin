@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"text/template"
 
 	"github.com/replicatedhq/embedded-cluster/pkg/runtimeconfig"
 	"github.com/replicatedhq/embedded-cluster/pkg/support"
@@ -232,5 +233,34 @@ func (m *Materializer) Ourselves() error {
 	if _, err := io.Copy(dst, src); err != nil {
 		return fmt.Errorf("unable to write file: %w", err)
 	}
+	return nil
+}
+
+// FirewalldConfig materializes the firewalld config file. This file creates a
+// zone for the embedded cluster pod and service CIDRs. The zone configuration
+// is read from an embedded template file (systemd/firewalld-config.tpl.xml).
+func (m *Materializer) FirewalldConfig(podCIDR, svcCIDR, networkInterface string) error {
+	content, err := systemdfs.ReadFile("systemd/firewalld-config.tpl.xml")
+	if err != nil {
+		return fmt.Errorf("unable to open firewalld template file: %w", err)
+	}
+
+	tpl, err := template.New("firewalld").Parse(string(content))
+	if err != nil {
+		return fmt.Errorf("unable to parse firewalld config file: %w", err)
+	}
+
+	dst := "/etc/firewalld/zones/embedded-cluster.xml"
+	fp, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return fmt.Errorf("unable to open firewalld config file: %w", err)
+	}
+	defer fp.Close()
+
+	data := map[string]string{"PodCIDR": podCIDR, "ServiceCIDR": svcCIDR, "NetworkInterface": networkInterface}
+	if err := tpl.Execute(fp, data); err != nil {
+		return fmt.Errorf("unable to execute firewalld config template: %w", err)
+	}
+
 	return nil
 }

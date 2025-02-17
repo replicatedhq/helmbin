@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zone target="ACCEPT">
+  <short>Embedded Cluster</short>
+  <description>Zone for Embedded Cluster communication</description>
+  <interface name="{{ .NetworkInterface }}"/>
+  <source address="{{ .PodCIDR }}"/>
+  <source address="{{ .ServiceCIDR }}"/>
+  <service name="ssh"/>
+  <service name="cockpit"/>
+  <service name="dhcpv6-client"/>
+  <port port="6443" protocol="tcp"/>
+  <port port="8132" protocol="tcp"/>
+  <port port="10250" protocol="tcp"/>
+  <port port="179" protocol="tcp"/>
+  <port port="179" protocol="udp"/>
+  <port port="80" protocol="tcp"/>
+  <masquerade/>
+</zone>

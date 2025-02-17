@@ -1062,7 +1062,7 @@ spec:
         - pass:
             message: Communication between {{ "{{ .FromCIDR }}" }} and {{ "{{ .ToCIDR }}" }} is working
         - fail:
-            message: Network communication between the pods network CIDR {{ "{{ .FromCIDR }}" }} and the services network CIDR {{ "{{ .ToCIDR }}" }} is currently disrupted on this node. This issue may prevent pods from properly interacting with services. To resolve this, please review and adjust the firewall configuration on this node to ensure it allows traffic between these network CIDRs.
+            message: Network communication between {{ "{{ .FromCIDR }}" }} and {{ "{{ .ToCIDR }}" }} is disrupted. Review and adjust the firewall configuration on to ensure it allows traffic between these networks.
 {{- range $index, $element := .TCPConnectionsRequired}}
     - tcpConnect:
         checkName: "TCP Connection to {{ $element }}"
